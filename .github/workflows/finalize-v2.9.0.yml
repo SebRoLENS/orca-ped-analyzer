@@ -1,0 +1,38 @@
+name: Finalize v2.9.0 release setup
+
+on:
+  push:
+    paths:
+      - '.github/workflows/finalize-v2.9.0.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - name: Link release notes and remove temporary workflows
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('.github/workflows/build-desktop-apps.yml')
+          text = p.read_text()
+          old = "        with:\n          files: release-assets/*\n          fail_on_unmatched_files: true\n"
+          new = "        with:\n          name: ORCA PED Analyzer v2.9.0\n          body_path: docs/RELEASE_NOTES_v2.9.0.md\n          files: release-assets/*\n          fail_on_unmatched_files: true\n"
+          if old not in text:
+              raise SystemExit('Expected release upload block not found')
+          p.write_text(text.replace(old, new, 1))
+          PY
+          rm -f .github/workflows/prepare-v2.9.0.yml
+          rm -f .github/workflows/finalize-v2.9.0.yml
+      - name: Commit final release setup
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Finalize v2.9.0 release setup'
+          git push origin HEAD:main
