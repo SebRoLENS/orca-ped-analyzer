@@ -6,8 +6,9 @@ authors:
   - family-names: Romi
     given-names: S.
     orcid: "https://orcid.org/0000-0002-9553-7788"
+doi: "10.5281/zenodo.21922077"
 repository-code: "https://github.com/SebRoLENS/orca-ped-analyzer"
-url: "https://github.com/SebRoLENS/orca-ped-analyzer/releases/tag/v2.9.0"
+url: "https://doi.org/10.5281/zenodo.21922077"
 version: "2.9.0"
 date-released: 2026-08-13
 license: MIT
