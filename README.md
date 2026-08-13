@@ -178,7 +178,7 @@ The manual explains the workflow from the Hessian to the Wilson `B` matrix, inte
 Current public version:
 
 ```text
-2026.08.11-vpt2.8
+2.8.0
 ```
 
 Check the installed script with:
@@ -193,7 +193,7 @@ If ORCA PED Analyzer contributes to published research, please acknowledge or ci
 
 A suggested citation for the current release is:
 
-> Romi, S. (2026). *ORCA PED Analyzer* (Version 2026.08.11-vpt2.8) [Computer software]. GitHub. https://github.com/SebRoLENS/orca-ped-analyzer
+> Romi, S. (2026). *ORCA PED Analyzer* (Version 2.8.0) [Computer software]. GitHub. https://github.com/SebRoLENS/orca-ped-analyzer
 
 For a journal article, please adapt the punctuation and ordering to the journal's required reference style while retaining the author, software title, version, year, and repository URL.
 
