@@ -1,5 +1,7 @@
 # ORCA PED Analyzer
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21916122.svg)](https://doi.org/10.5281/zenodo.21916122)
+
 **ORCA PED Analyzer** is a molecule-agnostic Python tool for assigning ORCA harmonic normal modes through a normalized diagonal potential-energy distribution (PED) in internal coordinates, with optional VPT2/GVPT2 integration, IR-spectrum generation, CSV export, and Avogadro CJSON export.
 
 The central idea is deliberately conservative: assignments are derived from the **calculated atomic motion and an internal-coordinate energy decomposition**, not from empirical frequency windows such as “1600 cm⁻¹ = C=C”.
@@ -189,13 +191,19 @@ python3 orca_ped_analyzer.py --version
 
 ## How to cite
 
-If ORCA PED Analyzer contributes to published research, please acknowledge or cite the software. GitHub will provide a **Cite this repository** entry from the included [`CITATION.cff`](CITATION.cff).
+If ORCA PED Analyzer contributes to published research, please acknowledge or cite the software. GitHub provides a **Cite this repository** entry from the included [`CITATION.cff`](CITATION.cff).
 
-A suggested citation for the current release is:
+The archived release is available on Zenodo with DOI **10.5281/zenodo.21916122**.
 
-> Romi, S. (2026). *ORCA PED Analyzer* (Version 2.8.0) [Computer software]. GitHub. https://github.com/SebRoLENS/orca-ped-analyzer
+Suggested general citation:
 
-For a journal article, please adapt the punctuation and ordering to the journal's required reference style while retaining the author, software title, version, year, and repository URL.
+> Romi, S. (2026). *ORCA PED Analyzer* (Version 2.8.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.21916122
+
+Suggested ACS/JACS-style citation:
+
+> Romi, S. *ORCA PED Analyzer*, version 2.8.0; Zenodo, 2026. https://doi.org/10.5281/zenodo.21916122.
+
+For other journals, please adapt punctuation and ordering to the journal's required reference style while retaining the author, software title, version, year, and DOI.
 
 ## Acknowledgements and contributions
 
