@@ -1,7 +1,5 @@
 # ORCA PED Analyzer
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21916122.svg)](https://doi.org/10.5281/zenodo.21916122)
-
 **ORCA PED Analyzer** is a molecule-agnostic Python tool for assigning ORCA harmonic normal modes through a normalized diagonal potential-energy distribution (PED) in internal coordinates, with optional VPT2/GVPT2 integration, IR-spectrum generation, CSV export, and Avogadro CJSON export.
 
 The central idea is deliberately conservative: assignments are derived from the **calculated atomic motion and an internal-coordinate energy decomposition**, not from empirical frequency windows such as “1600 cm⁻¹ = C=C”.
@@ -218,13 +216,13 @@ python3 orca_ped_analyzer.py --version
 
 If ORCA PED Analyzer contributes to published research, please acknowledge or cite the software. GitHub provides a **Cite this repository** entry from the included [`CITATION.cff`](CITATION.cff).
 
-The archived release is available on Zenodo with DOI **10.5281/zenodo.21916122**.
+Version **2.9.0** is available from the GitHub Release page. Until a Zenodo archive for this version is available, a general citation is:
 
-Suggested general citation:
+> Romi, S. (2026). *ORCA PED Analyzer* (Version 2.9.0) [Computer software]. GitHub. https://github.com/SebRoLENS/orca-ped-analyzer/releases/tag/v2.9.0
 
-> Romi, S. (2026). *ORCA PED Analyzer* (Version 2.9.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.21916122
+The previous **v2.8.0** archive remains available on Zenodo with DOI **10.5281/zenodo.21916122**.
 
-For other journals, please adapt punctuation and ordering to the journal's required reference style while retaining the author, software title, version, year, and DOI.
+When a Zenodo DOI for v2.9.0 becomes available, the citation metadata will be updated accordingly.
 
 ## Acknowledgements and contributions
 
