@@ -17,10 +17,13 @@ jobs:
           ref: main
 
       - name: Update Markdown manual
+        env:
+          NEW_SECTION_B64: "IyAyLiBXYXlzIHRvIHJ1biBPUkNBIFBFRCBBbmFseXplcgoKT1JDQSBQRUQgQW5hbHl6ZXIgY2FuIGJlIHVzZWQgZWl0aGVyIGFzIGEgKipwcmUtYnVpbHQgZGVza3RvcCBhcHBsaWNhdGlvbioqIG9yIGRpcmVjdGx5IGZyb20gdGhlIFB5dGhvbiBzb3VyY2UgY29kZS4gRm9yIG1vc3QgdXNlcnMsIHRoZSBkZXNrdG9wIGFwcGxpY2F0aW9uIGlzIHRoZSBzaW1wbGVzdCBvcHRpb24gYmVjYXVzZSBpdCBkb2VzIG5vdCByZXF1aXJlIGEgUHl0aG9uIGVudmlyb25tZW50IG9yIHRlcm1pbmFsIGNvbW1hbmRzLgoKIyMgMi4xIFByZS1idWlsdCBkZXNrdG9wIGFwcGxpY2F0aW9ucyAtIHJlY29tbWVuZGVkIGZvciBtb3N0IHVzZXJzCgpSZWFkeS10by1ydW4gYXBwbGljYXRpb25zIGFyZSBwcm92aWRlZCBvbiB0aGUgR2l0SHViIFJlbGVhc2VzIHBhZ2U6Cgo8aHR0cHM6Ly9naXRodWIuY29tL1NlYlJvTEVOUy9vcmNhLXBlZC1hbmFseXplci9yZWxlYXNlcy9sYXRlc3Q+CgpUaGUgY3VycmVudCByZWxlYXNlIHByb3ZpZGVzOgoKfCBQbGF0Zm9ybSB8IFBhY2thZ2UgfCBOb3RlcyB8CnwtLS18LS0tfC0tLXwKfCBMaW51eCB4ODZfNjQgfCBgT1JDQS1QRUQtQW5hbHl6ZXItTGludXgteDg2XzY0LkFwcEltYWdlYCB8IHBvcnRhYmxlIEFwcEltYWdlIHwKfCBXaW5kb3dzIHg4Nl82NCB8IGBPUkNBLVBFRC1BbmFseXplci5leGVgIHwgc3RhbmRhbG9uZSBleGVjdXRhYmxlIHwKfCBtYWNPUyBBcHBsZSBTaWxpY29uIHwgYE9SQ0EtUEVELUFuYWx5emVyLW1hY09TLWFybTY0LmRtZ2AgfCBmb3IgQXBwbGUgTS1zZXJpZXMgTWFjcyB8CnwgbWFjT1MgSW50ZWwgeDg2XzY0IHwgYE9SQ0EtUEVELUFuYWx5emVyLW1hY09TLXg4Nl82NC5kbWdgIHwgZm9yIEludGVsLWJhc2VkIE1hY3MgfAoKVGhlIHBhY2thZ2VkIGFwcGxpY2F0aW9ucyBhbHJlYWR5IGNvbnRhaW4gUHl0aG9uIGFuZCB0aGUgcmVxdWlyZWQgUHl0aG9uIGRlcGVuZGVuY2llcy4gVGhlcmVmb3JlLCB3aGVuIHVzaW5nIHRoZXNlIGJ1aWxkcywgKipQeXRob24sIE51bVB5IGFuZCBhIHRlcm1pbmFsIGFyZSBub3QgcmVxdWlyZWQqKi4KCiMjIyBMaW51eAoKMS4gRG93bmxvYWQgYE9SQ0EtUEVELUFuYWx5emVyLUxpbnV4LXg4Nl82NC5BcHBJbWFnZWAgZnJvbSB0aGUgbGF0ZXN0IEdpdEh1YiByZWxlYXNlLgoyLiBNYXJrIHRoZSBmaWxlIGFzIGV4ZWN1dGFibGUuIFRoaXMgY2FuIHVzdWFsbHkgYmUgZG9uZSBmcm9tIHRoZSBmaWxlIG1hbmFnZXIgdW5kZXIgKipQcm9wZXJ0aWVzIC0+IFBlcm1pc3Npb25zKiosIG9yIGZyb20gYSB0ZXJtaW5hbCB3aXRoOgoKYGBgYmFzaApjaG1vZCAreCBPUkNBLVBFRC1BbmFseXplci1MaW51eC14ODZfNjQuQXBwSW1hZ2UKYGBgCgozLiBEb3VibGUtY2xpY2sgdGhlIEFwcEltYWdlIHRvIGxhdW5jaCBPUkNBIFBFRCBBbmFseXplci4KClRoZSBBcHBJbWFnZSBpcyBwb3J0YWJsZSBhbmQgZG9lcyBub3QgcmVxdWlyZSBhIHRyYWRpdGlvbmFsIGluc3RhbGxhdGlvbi4gSXQgY2FuIGJlIGtlcHQgaW4gYW55IGNvbnZlbmllbnQgZGlyZWN0b3J5LgoKIyMjIFdpbmRvd3MKCjEuIERvd25sb2FkIGBPUkNBLVBFRC1BbmFseXplci5leGVgIGZyb20gdGhlIGxhdGVzdCBHaXRIdWIgcmVsZWFzZS4KMi4gU2F2ZSBpdCBpbiBhIGNvbnZlbmllbnQgZGlyZWN0b3J5LgozLiBEb3VibGUtY2xpY2sgdGhlIGV4ZWN1dGFibGUgdG8gbGF1bmNoIHRoZSBwcm9ncmFtLgoKTm8gUHl0aG9uIGluc3RhbGxhdGlvbiBvciBzZXBhcmF0ZSBpbnN0YWxsZXIgaXMgcmVxdWlyZWQuCgojIyMgbWFjT1MgLSBBcHBsZSBTaWxpY29uIG9yIEludGVsCgoxLiBTZWxlY3QgdGhlIERNRyBtYXRjaGluZyB0aGUgTWFjIGFyY2hpdGVjdHVyZToKICAgLSBgT1JDQS1QRUQtQW5hbHl6ZXItbWFjT1MtYXJtNjQuZG1nYCBmb3IgQXBwbGUgU2lsaWNvbiAoTS1zZXJpZXMpOwogICAtIGBPUkNBLVBFRC1BbmFseXplci1tYWNPUy14ODZfNjQuZG1nYCBmb3IgSW50ZWwgTWFjcy4KMi4gT3BlbiB0aGUgZG93bmxvYWRlZCBETUcuCjMuIENvcHkgKipPUkNBIFBFRCBBbmFseXplci5hcHAqKiB0byB0aGUgYEFwcGxpY2F0aW9uc2AgZm9sZGVyIG9yIGFub3RoZXIgcHJlZmVycmVkIGxvY2F0aW9uLgo0LiBMYXVuY2ggdGhlIGFwcGxpY2F0aW9uIG5vcm1hbGx5IGZyb20gRmluZGVyLgoKTm8gUHl0aG9uIGluc3RhbGxhdGlvbiBpcyByZXF1aXJlZC4KCiMjIDIuMiBVc2luZyB0aGUgZ3JhcGhpY2FsIGFwcGxpY2F0aW9uCgpUaGUgZ3JhcGhpY2FsIGxhdW5jaGVyIGlzIGludGVudGlvbmFsbHkgc2ltcGxlIGFuZCBydW5zIHRoZSBzYW1lIHNjaWVudGlmaWMgYW5hbHlzaXMgZW5naW5lIGFzIHRoZSBjb21tYW5kLWxpbmUgcHJvZ3JhbS4KCjEuIFNlbGVjdCB0aGUgKipjZW50cmFsIE9SQ0EgYC5oZXNzYCBmaWxlKiouCjIuIElmIGF2YWlsYWJsZSwgc2VsZWN0IHRoZSBjb21wbGV0ZWQgVlBUMi9HVlBUMiBgLm91dGAgZmlsZS4gVGhpcyBzdGVwIGlzIG9wdGlvbmFsLgozLiBTZWxlY3QgYW4gb3V0cHV0IGRpcmVjdG9yeSBpZiBhIGxvY2F0aW9uIGRpZmZlcmVudCBmcm9tIHRoZSBkZWZhdWx0IGlzIGRlc2lyZWQuCjQuIFN0YXJ0IHRoZSBhbmFseXNpcy4KClRoZSBnZW5lcmF0ZWQgUEVEIHRhYmxlcywgYXNzaWdubWVudHMsIHNwZWN0cmEsIFZQVDIgaW5mb3JtYXRpb24gYW5kIEF2b2dhZHJvIENKU09OIGZpbGVzIGFyZSB0aGUgc2FtZSBzY2llbnRpZmljIG91dHB1dHMgcHJvZHVjZWQgYnkgdGhlIGNvcnJlc3BvbmRpbmcgY29tbWFuZC1saW5lIGFuYWx5c2lzLgoKVGhlIGNlbnRyYWwgSGVzc2lhbiBydWxlIHJlbWFpbnMgdW5jaGFuZ2VkIHdoZW4gdXNpbmcgdGhlIEdVSTogZGlzcGxhY2VkIFZQVDIgSGVzc2lhbnMgc3VjaCBhcyBgbW9sZWN1bGVfRDAwMS5oZXNzYCBtdXN0IG5vdCBiZSB1c2VkIGFzIHRoZSBtYWluIGlucHV0LgoKIyMgMi4zIFNlY3VyaXR5IHdhcm5pbmdzIGFuZCB1bnNpZ25lZCBidWlsZHMKClRoZSBjdXJyZW50IGRlc2t0b3AgYXBwbGljYXRpb25zIGFyZSAqKm5vdCBkaWdpdGFsbHkgY29kZS1zaWduZWQgb3Igbm90YXJpemVkKiouIENvbnNlcXVlbnRseSwgb3BlcmF0aW5nLXN5c3RlbSBzZWN1cml0eSBtZWNoYW5pc21zIG1heSBkaXNwbGF5IGEgd2FybmluZyB3aGVuIHRoZSBhcHBsaWNhdGlvbiBpcyBsYXVuY2hlZCBmb3IgdGhlIGZpcnN0IHRpbWUuCgotICoqV2luZG93czoqKiBNaWNyb3NvZnQgU21hcnRTY3JlZW4gbWF5IHJlcG9ydCB0aGF0IHRoZSBwdWJsaXNoZXIgaXMgdW5rbm93biBvciBhc2sgZm9yIGNvbmZpcm1hdGlvbiBiZWZvcmUgcnVubmluZyB0aGUgYXBwbGljYXRpb24uCi0gKiptYWNPUzoqKiBHYXRla2VlcGVyIG1heSByZXBvcnQgdGhhdCB0aGUgZGV2ZWxvcGVyIGNhbm5vdCBiZSB2ZXJpZmllZCBhbmQgbWF5IHJlcXVpcmUgdGhlIHVzZXIgdG8gZXhwbGljaXRseSBhbGxvdyBvciBvcGVuIHRoZSBhcHBsaWNhdGlvbi4KLSAqKkxpbnV4OioqIEFwcEltYWdlIGZpbGVzIGFyZSBub3Qgbm9ybWFsbHkgYWZmZWN0ZWQgYnkgYW4gZXF1aXZhbGVudCBwdWJsaXNoZXItc2lnbmluZyB3YXJuaW5nLCBidXQgdGhlIGV4ZWN1dGFibGUgcGVybWlzc2lvbiBtYXkgbmVlZCB0byBiZSBlbmFibGVkIGJlZm9yZSBmaXJzdCB1c2UuCgpUaGVzZSB3YXJuaW5ncyBhcmUgZXhwZWN0ZWQgZm9yIHVuc2lnbmVkIHNvZnR3YXJlIGRvd25sb2FkZWQgZnJvbSB0aGUgSW50ZXJuZXQgYW5kIGluZGljYXRlIHRoYXQgdGhlIG9wZXJhdGluZyBzeXN0ZW0gY2Fubm90IHZlcmlmeSBhIGNvZGUtc2lnbmluZyBpZGVudGl0eSBmb3IgdGhlIHB1Ymxpc2hlci4gVGhleSBhcmUgc2VwYXJhdGUgZnJvbSB0aGUgc2NpZW50aWZpYyBvcGVyYXRpb24gb2YgdGhlIHByb2dyYW0uCgpGb3IgYWRkaXRpb25hbCB2ZXJpZmljYXRpb24sIGVhY2ggR2l0SHViIHJlbGVhc2UgaW5jbHVkZXMgYFNIQTI1NlNVTVMudHh0YCwgY29udGFpbmluZyBTSEEtMjU2IGNoZWNrc3VtcyBmb3IgdGhlIGRpc3RyaWJ1dGVkIGFwcGxpY2F0aW9uIGZpbGVzLiBVc2VycyB3aG8gcmVxdWlyZSBzdHJpY3Qgc29mdHdhcmUgcHJvdmVuYW5jZSBjYW4gY29tcGFyZSB0aGUgY2hlY2tzdW0gb2YgdGhlIGRvd25sb2FkZWQgZmlsZSB3aXRoIHRoZSB2YWx1ZSBwdWJsaXNoZWQgaW4gdGhlIHJlbGVhc2UuCgpUaGUgYXBwbGljYXRpb24gc291cmNlIGNvZGUgYW5kIHRoZSBHaXRIdWIgQWN0aW9ucyBidWlsZCB3b3JrZmxvdyB1c2VkIHRvIGNyZWF0ZSB0aGUgZGlzdHJpYnV0ZWQgcGFja2FnZXMgYXJlIHB1YmxpYyBpbiB0aGlzIHJlcG9zaXRvcnkuCgojIyAyLjQgUnVubmluZyBmcm9tIHNvdXJjZSAvIGNvbW1hbmQgbGluZQoKVGhlIFB5dGhvbiBzb3VyY2UgdmVyc2lvbiByZW1haW5zIHRoZSBwcmVmZXJyZWQgaW50ZXJmYWNlIGZvciBhZHZhbmNlZCBjb21tYW5kLWxpbmUgb3B0aW9ucywgc2NyaXB0aW5nIGFuZCByZXByb2R1Y2libGUgYXV0b21hdGVkIHdvcmtmbG93cy4KClJlcXVpcmVtZW50cyBmb3IgdGhlICoqc291cmNlIHZlcnNpb24gb25seSoqOgoKLSBQeXRob24gMy45IG9yIG5ld2VyCi0gTnVtUHkKCkluc3RhbGwgdGhlIGRlcGVuZGVuY3kgd2l0aDoKCmBgYGJhc2gKcHl0aG9uMyAtbSBwaXAgaW5zdGFsbCAtciByZXF1aXJlbWVudHMudHh0CmBgYAoKT24gRGViaWFuLCBOdW1QeSBjYW4gYWx0ZXJuYXRpdmVseSBiZSBpbnN0YWxsZWQgd2l0aDoKCmBgYGJhc2gKc3VkbyBhcHQgaW5zdGFsbCBweXRob24zLW51bXB5CmBgYAoKQ2hlY2sgdGhlIHNjcmlwdCB2ZXJzaW9uIGFuZCBhdmFpbGFibGUgb3B0aW9ucyB3aXRoOgoKYGBgYmFzaApweXRob24zIG9yY2FfcGVkX2FuYWx5emVyLnB5IC0tdmVyc2lvbgpweXRob24zIG9yY2FfcGVkX2FuYWx5emVyLnB5IC0taGVscApgYGAKCkV4cGVjdGVkIHB1YmxpYyB2ZXJzaW9uOgoKYGBgdGV4dApvcmNhX3BlZF9hbmFseXplci5weSAyLjkuMApgYGAKCg=="
         run: |
           python3 - <<'PY'
+          import base64
+          import os
           from pathlib import Path
-          import re
 
           p = Path('docs/ORCA_PED_Analyzer_Manual.md')
           text = p.read_text(encoding='utf-8')
@@ -32,133 +35,12 @@ jobs:
 
           old_start = text.index('# 2. Requirements and version check')
           old_end = text.index('# 3. Which Hessian should be used?')
-
-          new_section = r'''# 2. Ways to run ORCA PED Analyzer
-
-ORCA PED Analyzer can be used either as a **pre-built desktop application** or directly from the Python source code. For most users, the desktop application is the simplest option because it does not require a Python environment or terminal commands.
-
-## 2.1 Pre-built desktop applications - recommended for most users
-
-Ready-to-run applications are provided on the GitHub Releases page:
-
-<https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest>
-
-The current release provides:
-
-| Platform | Package | Notes |
-|---|---|---|
-| Linux x86_64 | `ORCA-PED-Analyzer-Linux-x86_64.AppImage` | portable AppImage |
-| Windows x86_64 | `ORCA-PED-Analyzer.exe` | standalone executable |
-| macOS Apple Silicon | `ORCA-PED-Analyzer-macOS-arm64.dmg` | for Apple M-series Macs |
-| macOS Intel x86_64 | `ORCA-PED-Analyzer-macOS-x86_64.dmg` | for Intel-based Macs |
-
-The packaged applications already contain Python and the required Python dependencies. Therefore, when using these builds, **Python, NumPy and a terminal are not required**.
-
-### Linux
-
-1. Download `ORCA-PED-Analyzer-Linux-x86_64.AppImage` from the latest GitHub release.
-2. Mark the file as executable. This can usually be done from the file manager under **Properties -> Permissions**, or from a terminal with:
-
-```bash
-chmod +x ORCA-PED-Analyzer-Linux-x86_64.AppImage
-```
-
-3. Double-click the AppImage to launch ORCA PED Analyzer.
-
-The AppImage is portable and does not require a traditional installation. It can be kept in any convenient directory.
-
-### Windows
-
-1. Download `ORCA-PED-Analyzer.exe` from the latest GitHub release.
-2. Save it in a convenient directory.
-3. Double-click the executable to launch the program.
-
-No Python installation or separate installer is required.
-
-### macOS - Apple Silicon or Intel
-
-1. Select the DMG matching the Mac architecture:
-   - `ORCA-PED-Analyzer-macOS-arm64.dmg` for Apple Silicon (M-series);
-   - `ORCA-PED-Analyzer-macOS-x86_64.dmg` for Intel Macs.
-2. Open the downloaded DMG.
-3. Copy **ORCA PED Analyzer.app** to the `Applications` folder or another preferred location.
-4. Launch the application normally from Finder.
-
-No Python installation is required.
-
-## 2.2 Using the graphical application
-
-The graphical launcher is intentionally simple and runs the same scientific analysis engine as the command-line program.
-
-1. Select the **central ORCA `.hess` file**.
-2. If available, select the completed VPT2/GVPT2 `.out` file. This step is optional.
-3. Select an output directory if a location different from the default is desired.
-4. Start the analysis.
-
-The generated PED tables, assignments, spectra, VPT2 information and Avogadro CJSON files are the same scientific outputs produced by the corresponding command-line analysis.
-
-The central Hessian rule remains unchanged when using the GUI: displaced VPT2 Hessians such as `molecule_D001.hess` must not be used as the main input.
-
-## 2.3 Security warnings and unsigned builds
-
-The current desktop applications are **not digitally code-signed or notarized**. Consequently, operating-system security mechanisms may display a warning when the application is launched for the first time.
-
-- **Windows:** Microsoft SmartScreen may report that the publisher is unknown or ask for confirmation before running the application.
-- **macOS:** Gatekeeper may report that the developer cannot be verified and may require the user to explicitly allow or open the application.
-- **Linux:** AppImage files are not normally affected by an equivalent publisher-signing warning, but the executable permission may need to be enabled before first use.
-
-These warnings are expected for unsigned software downloaded from the Internet and indicate that the operating system cannot verify a commercial code-signing identity for the publisher. They are separate from the scientific operation of the program.
-
-For additional verification, each GitHub release includes `SHA256SUMS.txt`, containing SHA-256 checksums for the distributed application files. Users who require strict software provenance can compare the checksum of the downloaded file with the value published in the release.
-
-The application source code and the GitHub Actions build workflow used to create the distributed packages are public in this repository.
-
-## 2.4 Running from source / command line
-
-The Python source version remains the preferred interface for advanced command-line options, scripting and reproducible automated workflows.
-
-Requirements for the **source version only**:
-
-- Python 3.9 or newer
-- NumPy
-
-Install the dependency with:
-
-```bash
-python3 -m pip install -r requirements.txt
-```
-
-On Debian, NumPy can alternatively be installed with:
-
-```bash
-sudo apt install python3-numpy
-```
-
-Check the script version and available options with:
-
-```bash
-python3 orca_ped_analyzer.py --version
-python3 orca_ped_analyzer.py --help
-```
-
-Expected public version:
-
-```text
-orca_ped_analyzer.py 2.9.0
-```
-
-'''
-
+          new_section = base64.b64decode(os.environ['NEW_SECTION_B64']).decode('utf-8')
           text = text[:old_start] + new_section + text[old_end:]
 
-          # Add the desktop application as a v2.9.0 feature if not already present.
           marker = '# 1. Main features of version 2.9.0\n\n'
           if marker in text and '**Desktop applications.**' not in text:
-              text = text.replace(
-                  marker,
-                  marker + '- **Desktop applications.** Pre-built Linux AppImage, Windows executable and macOS DMG packages provide a graphical interface without requiring a local Python installation.\n',
-                  1,
-              )
+              text = text.replace(marker, marker + '- **Desktop applications.** Pre-built Linux AppImage, Windows executable and macOS DMG packages provide a graphical interface without requiring a local Python installation.\n', 1)
 
           p.write_text(text, encoding='utf-8')
           PY
@@ -170,10 +52,7 @@ orca_ped_analyzer.py 2.9.0
 
       - name: Build PDF manual
         run: |
-          pandoc docs/ORCA_PED_Analyzer_Manual.md \
-            --from markdown \
-            --pdf-engine=xelatex \
-            --output docs/ORCA_PED_Analyzer_Manual.pdf
+          pandoc docs/ORCA_PED_Analyzer_Manual.md --from markdown --pdf-engine=xelatex --output docs/ORCA_PED_Analyzer_Manual.pdf
 
       - name: Upload manual PDF for verification
         uses: actions/upload-artifact@v4
