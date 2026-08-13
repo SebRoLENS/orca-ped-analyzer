@@ -1,0 +1,191 @@
+name: Update manual for v2.9.0 desktop apps
+
+on:
+  push:
+    paths:
+      - '.github/workflows/update-manual-v2.9.0.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update-manual:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Update Markdown manual
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('docs/ORCA_PED_Analyzer_Manual.md')
+          text = p.read_text(encoding='utf-8')
+
+          text = text.replace('date: "Version 2026.08.11-vpt2.8"', 'date: "Version 2.9.0"')
+          text = text.replace('# 1. Main features of version 2.8', '# 1. Main features of version 2.9.0')
+          text = text.replace('Version 2.8 keeps the preceding translational/rotational entries', 'Version 2.9.0 keeps the preceding translational/rotational entries')
+          text = text.replace('# 4. Quick start', '# 4. Command-line quick start')
+
+          old_start = text.index('# 2. Requirements and version check')
+          old_end = text.index('# 3. Which Hessian should be used?')
+
+          new_section = r'''# 2. Ways to run ORCA PED Analyzer
+
+ORCA PED Analyzer can be used either as a **pre-built desktop application** or directly from the Python source code. For most users, the desktop application is the simplest option because it does not require a Python environment or terminal commands.
+
+## 2.1 Pre-built desktop applications - recommended for most users
+
+Ready-to-run applications are provided on the GitHub Releases page:
+
+<https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest>
+
+The current release provides:
+
+| Platform | Package | Notes |
+|---|---|---|
+| Linux x86_64 | `ORCA-PED-Analyzer-Linux-x86_64.AppImage` | portable AppImage |
+| Windows x86_64 | `ORCA-PED-Analyzer.exe` | standalone executable |
+| macOS Apple Silicon | `ORCA-PED-Analyzer-macOS-arm64.dmg` | for Apple M-series Macs |
+| macOS Intel x86_64 | `ORCA-PED-Analyzer-macOS-x86_64.dmg` | for Intel-based Macs |
+
+The packaged applications already contain Python and the required Python dependencies. Therefore, when using these builds, **Python, NumPy and a terminal are not required**.
+
+### Linux
+
+1. Download `ORCA-PED-Analyzer-Linux-x86_64.AppImage` from the latest GitHub release.
+2. Mark the file as executable. This can usually be done from the file manager under **Properties -> Permissions**, or from a terminal with:
+
+```bash
+chmod +x ORCA-PED-Analyzer-Linux-x86_64.AppImage
+```
+
+3. Double-click the AppImage to launch ORCA PED Analyzer.
+
+The AppImage is portable and does not require a traditional installation. It can be kept in any convenient directory.
+
+### Windows
+
+1. Download `ORCA-PED-Analyzer.exe` from the latest GitHub release.
+2. Save it in a convenient directory.
+3. Double-click the executable to launch the program.
+
+No Python installation or separate installer is required.
+
+### macOS - Apple Silicon or Intel
+
+1. Select the DMG matching the Mac architecture:
+   - `ORCA-PED-Analyzer-macOS-arm64.dmg` for Apple Silicon (M-series);
+   - `ORCA-PED-Analyzer-macOS-x86_64.dmg` for Intel Macs.
+2. Open the downloaded DMG.
+3. Copy **ORCA PED Analyzer.app** to the `Applications` folder or another preferred location.
+4. Launch the application normally from Finder.
+
+No Python installation is required.
+
+## 2.2 Using the graphical application
+
+The graphical launcher is intentionally simple and runs the same scientific analysis engine as the command-line program.
+
+1. Select the **central ORCA `.hess` file**.
+2. If available, select the completed VPT2/GVPT2 `.out` file. This step is optional.
+3. Select an output directory if a location different from the default is desired.
+4. Start the analysis.
+
+The generated PED tables, assignments, spectra, VPT2 information and Avogadro CJSON files are the same scientific outputs produced by the corresponding command-line analysis.
+
+The central Hessian rule remains unchanged when using the GUI: displaced VPT2 Hessians such as `molecule_D001.hess` must not be used as the main input.
+
+## 2.3 Security warnings and unsigned builds
+
+The current desktop applications are **not digitally code-signed or notarized**. Consequently, operating-system security mechanisms may display a warning when the application is launched for the first time.
+
+- **Windows:** Microsoft SmartScreen may report that the publisher is unknown or ask for confirmation before running the application.
+- **macOS:** Gatekeeper may report that the developer cannot be verified and may require the user to explicitly allow or open the application.
+- **Linux:** AppImage files are not normally affected by an equivalent publisher-signing warning, but the executable permission may need to be enabled before first use.
+
+These warnings are expected for unsigned software downloaded from the Internet and indicate that the operating system cannot verify a commercial code-signing identity for the publisher. They are separate from the scientific operation of the program.
+
+For additional verification, each GitHub release includes `SHA256SUMS.txt`, containing SHA-256 checksums for the distributed application files. Users who require strict software provenance can compare the checksum of the downloaded file with the value published in the release.
+
+The application source code and the GitHub Actions build workflow used to create the distributed packages are public in this repository.
+
+## 2.4 Running from source / command line
+
+The Python source version remains the preferred interface for advanced command-line options, scripting and reproducible automated workflows.
+
+Requirements for the **source version only**:
+
+- Python 3.9 or newer
+- NumPy
+
+Install the dependency with:
+
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+On Debian, NumPy can alternatively be installed with:
+
+```bash
+sudo apt install python3-numpy
+```
+
+Check the script version and available options with:
+
+```bash
+python3 orca_ped_analyzer.py --version
+python3 orca_ped_analyzer.py --help
+```
+
+Expected public version:
+
+```text
+orca_ped_analyzer.py 2.9.0
+```
+
+'''
+
+          text = text[:old_start] + new_section + text[old_end:]
+
+          # Add the desktop application as a v2.9.0 feature if not already present.
+          marker = '# 1. Main features of version 2.9.0\n\n'
+          if marker in text and '**Desktop applications.**' not in text:
+              text = text.replace(
+                  marker,
+                  marker + '- **Desktop applications.** Pre-built Linux AppImage, Windows executable and macOS DMG packages provide a graphical interface without requiring a local Python installation.\n',
+                  1,
+              )
+
+          p.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Install PDF build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc texlive-xetex texlive-latex-extra texlive-fonts-recommended
+
+      - name: Build PDF manual
+        run: |
+          pandoc docs/ORCA_PED_Analyzer_Manual.md \
+            --from markdown \
+            --pdf-engine=xelatex \
+            --output docs/ORCA_PED_Analyzer_Manual.pdf
+
+      - name: Upload manual PDF for verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: ORCA-PED-Analyzer-Manual-v2.9.0
+          path: docs/ORCA_PED_Analyzer_Manual.pdf
+          if-no-files-found: error
+
+      - name: Commit updated manual
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/ORCA_PED_Analyzer_Manual.md docs/ORCA_PED_Analyzer_Manual.pdf
+          git commit -m 'Update manual for v2.9.0 desktop applications'
+          git push origin HEAD:main
