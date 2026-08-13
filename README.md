@@ -169,7 +169,7 @@ The CJSON contains the preceding translational/rotational entries so that the mo
 A detailed English manual is included in:
 
 - [`docs/ORCA_PED_Analyzer_Manual.md`](docs/ORCA_PED_Analyzer_Manual.md)
-- `docs/ORCA_PED_Analyzer_Manual.pdf`
+- [PDF manual](docs/ORCA_PED_Analyzer_Manual.pdf)
 
 The manual explains the workflow from the Hessian to the Wilson `B` matrix, internal force constants, PED percentages, grouped chemical assignments, VPT2 mapping, IR spectra, and Avogadro visualization.
 
@@ -186,6 +186,24 @@ Check the installed script with:
 ```bash
 python3 orca_ped_analyzer.py --version
 ```
+
+## How to cite
+
+If ORCA PED Analyzer contributes to published research, please acknowledge or cite the software. GitHub will provide a **Cite this repository** entry from the included [`CITATION.cff`](CITATION.cff).
+
+A suggested citation for the current release is:
+
+> Romi, S. (2026). *ORCA PED Analyzer* (Version 2026.08.11-vpt2.8) [Computer software]. GitHub. https://github.com/SebRoLENS/orca-ped-analyzer
+
+For a journal article, please adapt the punctuation and ordering to the journal's required reference style while retaining the author, software title, version, year, and repository URL.
+
+## Acknowledgements and contributions
+
+If you use ORCA PED Analyzer in your research, an acknowledgement or citation of this software would be greatly appreciated.
+
+Testing on different molecular systems is especially valuable. **Bug reports, validation results, suggestions, documentation improvements, and code contributions are very welcome.** If you observe unexpected behaviour, obtain an interesting validation case, or would like to improve the project, please open a GitHub issue or submit a pull request.
+
+Community testing and contributions will help make the assignments more robust across a wider range of molecules and computational workflows.
 
 ## License
 
