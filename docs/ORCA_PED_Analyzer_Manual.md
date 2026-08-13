@@ -80,12 +80,10 @@ Ready-to-run applications are provided on the GitHub Releases page:
 
 The current release provides:
 
-| Platform | Package | Notes |
-|---|---|---|
-| Linux x86_64 | `ORCA-PED-Analyzer-Linux-x86_64.AppImage` | portable AppImage |
-| Windows x86_64 | `ORCA-PED-Analyzer.exe` | standalone executable |
-| macOS Apple Silicon | `ORCA-PED-Analyzer-macOS-arm64.dmg` | for Apple M-series Macs |
-| macOS Intel x86_64 | `ORCA-PED-Analyzer-macOS-x86_64.dmg` | for Intel-based Macs |
+- **Linux x86_64:** `ORCA-PED-Analyzer-Linux-x86_64.AppImage` - portable AppImage.
+- **Windows x86_64:** `ORCA-PED-Analyzer.exe` - standalone executable.
+- **macOS Apple Silicon:** `ORCA-PED-Analyzer-macOS-arm64.dmg` - for Apple M-series Macs.
+- **macOS Intel x86_64:** `ORCA-PED-Analyzer-macOS-x86_64.dmg` - for Intel-based Macs.
 
 The packaged applications already contain Python and the required Python dependencies. Therefore, when using these builds, **Python, NumPy and a terminal are not required**.
 
