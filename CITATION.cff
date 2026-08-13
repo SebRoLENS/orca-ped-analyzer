@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: "If you use ORCA PED Analyzer in your research, please cite this software."
+title: "ORCA PED Analyzer"
+type: software
+authors:
+  - family-names: Romi
+    given-names: S.
+    orcid: "https://orcid.org/0000-0002-9553-7788"
+repository-code: "https://github.com/SebRoLENS/orca-ped-analyzer"
+url: "https://github.com/SebRoLENS/orca-ped-analyzer"
+version: "2026.08.11-vpt2.8"
+date-released: 2026-08-13
+license: MIT
+keywords:
+  - ORCA
+  - potential energy distribution
+  - PED
+  - vibrational analysis
+  - normal modes
+  - vibrational spectroscopy
+  - infrared spectroscopy
+  - VPT2
+  - GVPT2
+  - computational chemistry
+  - quantum chemistry
+abstract: >-
+  ORCA PED Analyzer is a molecule-agnostic Python utility for assigning ORCA
+  harmonic normal modes through a normalized diagonal potential-energy
+  distribution in internal coordinates, with optional VPT2/GVPT2 integration,
+  IR-spectrum generation, CSV export, and Avogadro CJSON export.
