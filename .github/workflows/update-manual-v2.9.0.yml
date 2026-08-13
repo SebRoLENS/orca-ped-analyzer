@@ -1,4 +1,4 @@
-name: Update manual for v2.9.0 desktop apps
+name: Add development disclaimer to manual
 
 on:
   push:
@@ -16,33 +16,22 @@ jobs:
         with:
           ref: main
 
-      - name: Update Markdown manual
+      - name: Insert disclaimer
         env:
-          NEW_SECTION_B64: "IyAyLiBXYXlzIHRvIHJ1biBPUkNBIFBFRCBBbmFseXplcgoKT1JDQSBQRUQgQW5hbHl6ZXIgY2FuIGJlIHVzZWQgZWl0aGVyIGFzIGEgKipwcmUtYnVpbHQgZGVza3RvcCBhcHBsaWNhdGlvbioqIG9yIGRpcmVjdGx5IGZyb20gdGhlIFB5dGhvbiBzb3VyY2UgY29kZS4gRm9yIG1vc3QgdXNlcnMsIHRoZSBkZXNrdG9wIGFwcGxpY2F0aW9uIGlzIHRoZSBzaW1wbGVzdCBvcHRpb24gYmVjYXVzZSBpdCBkb2VzIG5vdCByZXF1aXJlIGEgUHl0aG9uIGVudmlyb25tZW50IG9yIHRlcm1pbmFsIGNvbW1hbmRzLgoKIyMgMi4xIFByZS1idWlsdCBkZXNrdG9wIGFwcGxpY2F0aW9ucyAtIHJlY29tbWVuZGVkIGZvciBtb3N0IHVzZXJzCgpSZWFkeS10by1ydW4gYXBwbGljYXRpb25zIGFyZSBwcm92aWRlZCBvbiB0aGUgR2l0SHViIFJlbGVhc2VzIHBhZ2U6Cgo8aHR0cHM6Ly9naXRodWIuY29tL1NlYlJvTEVOUy9vcmNhLXBlZC1hbmFseXplci9yZWxlYXNlcy9sYXRlc3Q+CgpUaGUgY3VycmVudCByZWxlYXNlIHByb3ZpZGVzOgoKfCBQbGF0Zm9ybSB8IFBhY2thZ2UgfCBOb3RlcyB8CnwtLS18LS0tfC0tLXwKfCBMaW51eCB4ODZfNjQgfCBgT1JDQS1QRUQtQW5hbHl6ZXItTGludXgteDg2XzY0LkFwcEltYWdlYCB8IHBvcnRhYmxlIEFwcEltYWdlIHwKfCBXaW5kb3dzIHg4Nl82NCB8IGBPUkNBLVBFRC1BbmFseXplci5leGVgIHwgc3RhbmRhbG9uZSBleGVjdXRhYmxlIHwKfCBtYWNPUyBBcHBsZSBTaWxpY29uIHwgYE9SQ0EtUEVELUFuYWx5emVyLW1hY09TLWFybTY0LmRtZ2AgfCBmb3IgQXBwbGUgTS1zZXJpZXMgTWFjcyB8CnwgbWFjT1MgSW50ZWwgeDg2XzY0IHwgYE9SQ0EtUEVELUFuYWx5emVyLW1hY09TLXg4Nl82NC5kbWdgIHwgZm9yIEludGVsLWJhc2VkIE1hY3MgfAoKVGhlIHBhY2thZ2VkIGFwcGxpY2F0aW9ucyBhbHJlYWR5IGNvbnRhaW4gUHl0aG9uIGFuZCB0aGUgcmVxdWlyZWQgUHl0aG9uIGRlcGVuZGVuY2llcy4gVGhlcmVmb3JlLCB3aGVuIHVzaW5nIHRoZXNlIGJ1aWxkcywgKipQeXRob24sIE51bVB5IGFuZCBhIHRlcm1pbmFsIGFyZSBub3QgcmVxdWlyZWQqKi4KCiMjIyBMaW51eAoKMS4gRG93bmxvYWQgYE9SQ0EtUEVELUFuYWx5emVyLUxpbnV4LXg4Nl82NC5BcHBJbWFnZWAgZnJvbSB0aGUgbGF0ZXN0IEdpdEh1YiByZWxlYXNlLgoyLiBNYXJrIHRoZSBmaWxlIGFzIGV4ZWN1dGFibGUuIFRoaXMgY2FuIHVzdWFsbHkgYmUgZG9uZSBmcm9tIHRoZSBmaWxlIG1hbmFnZXIgdW5kZXIgKipQcm9wZXJ0aWVzIC0+IFBlcm1pc3Npb25zKiosIG9yIGZyb20gYSB0ZXJtaW5hbCB3aXRoOgoKYGBgYmFzaApjaG1vZCAreCBPUkNBLVBFRC1BbmFseXplci1MaW51eC14ODZfNjQuQXBwSW1hZ2UKYGBgCgozLiBEb3VibGUtY2xpY2sgdGhlIEFwcEltYWdlIHRvIGxhdW5jaCBPUkNBIFBFRCBBbmFseXplci4KClRoZSBBcHBJbWFnZSBpcyBwb3J0YWJsZSBhbmQgZG9lcyBub3QgcmVxdWlyZSBhIHRyYWRpdGlvbmFsIGluc3RhbGxhdGlvbi4gSXQgY2FuIGJlIGtlcHQgaW4gYW55IGNvbnZlbmllbnQgZGlyZWN0b3J5LgoKIyMjIFdpbmRvd3MKCjEuIERvd25sb2FkIGBPUkNBLVBFRC1BbmFseXplci5leGVgIGZyb20gdGhlIGxhdGVzdCBHaXRIdWIgcmVsZWFzZS4KMi4gU2F2ZSBpdCBpbiBhIGNvbnZlbmllbnQgZGlyZWN0b3J5LgozLiBEb3VibGUtY2xpY2sgdGhlIGV4ZWN1dGFibGUgdG8gbGF1bmNoIHRoZSBwcm9ncmFtLgoKTm8gUHl0aG9uIGluc3RhbGxhdGlvbiBvciBzZXBhcmF0ZSBpbnN0YWxsZXIgaXMgcmVxdWlyZWQuCgojIyMgbWFjT1MgLSBBcHBsZSBTaWxpY29uIG9yIEludGVsCgoxLiBTZWxlY3QgdGhlIERNRyBtYXRjaGluZyB0aGUgTWFjIGFyY2hpdGVjdHVyZToKICAgLSBgT1JDQS1QRUQtQW5hbHl6ZXItbWFjT1MtYXJtNjQuZG1nYCBmb3IgQXBwbGUgU2lsaWNvbiAoTS1zZXJpZXMpOwogICAtIGBPUkNBLVBFRC1BbmFseXplci1tYWNPUy14ODZfNjQuZG1nYCBmb3IgSW50ZWwgTWFjcy4KMi4gT3BlbiB0aGUgZG93bmxvYWRlZCBETUcuCjMuIENvcHkgKipPUkNBIFBFRCBBbmFseXplci5hcHAqKiB0byB0aGUgYEFwcGxpY2F0aW9uc2AgZm9sZGVyIG9yIGFub3RoZXIgcHJlZmVycmVkIGxvY2F0aW9uLgo0LiBMYXVuY2ggdGhlIGFwcGxpY2F0aW9uIG5vcm1hbGx5IGZyb20gRmluZGVyLgoKTm8gUHl0aG9uIGluc3RhbGxhdGlvbiBpcyByZXF1aXJlZC4KCiMjIDIuMiBVc2luZyB0aGUgZ3JhcGhpY2FsIGFwcGxpY2F0aW9uCgpUaGUgZ3JhcGhpY2FsIGxhdW5jaGVyIGlzIGludGVudGlvbmFsbHkgc2ltcGxlIGFuZCBydW5zIHRoZSBzYW1lIHNjaWVudGlmaWMgYW5hbHlzaXMgZW5naW5lIGFzIHRoZSBjb21tYW5kLWxpbmUgcHJvZ3JhbS4KCjEuIFNlbGVjdCB0aGUgKipjZW50cmFsIE9SQ0EgYC5oZXNzYCBmaWxlKiouCjIuIElmIGF2YWlsYWJsZSwgc2VsZWN0IHRoZSBjb21wbGV0ZWQgVlBUMi9HVlBUMiBgLm91dGAgZmlsZS4gVGhpcyBzdGVwIGlzIG9wdGlvbmFsLgozLiBTZWxlY3QgYW4gb3V0cHV0IGRpcmVjdG9yeSBpZiBhIGxvY2F0aW9uIGRpZmZlcmVudCBmcm9tIHRoZSBkZWZhdWx0IGlzIGRlc2lyZWQuCjQuIFN0YXJ0IHRoZSBhbmFseXNpcy4KClRoZSBnZW5lcmF0ZWQgUEVEIHRhYmxlcywgYXNzaWdubWVudHMsIHNwZWN0cmEsIFZQVDIgaW5mb3JtYXRpb24gYW5kIEF2b2dhZHJvIENKU09OIGZpbGVzIGFyZSB0aGUgc2FtZSBzY2llbnRpZmljIG91dHB1dHMgcHJvZHVjZWQgYnkgdGhlIGNvcnJlc3BvbmRpbmcgY29tbWFuZC1saW5lIGFuYWx5c2lzLgoKVGhlIGNlbnRyYWwgSGVzc2lhbiBydWxlIHJlbWFpbnMgdW5jaGFuZ2VkIHdoZW4gdXNpbmcgdGhlIEdVSTogZGlzcGxhY2VkIFZQVDIgSGVzc2lhbnMgc3VjaCBhcyBgbW9sZWN1bGVfRDAwMS5oZXNzYCBtdXN0IG5vdCBiZSB1c2VkIGFzIHRoZSBtYWluIGlucHV0LgoKIyMgMi4zIFNlY3VyaXR5IHdhcm5pbmdzIGFuZCB1bnNpZ25lZCBidWlsZHMKClRoZSBjdXJyZW50IGRlc2t0b3AgYXBwbGljYXRpb25zIGFyZSAqKm5vdCBkaWdpdGFsbHkgY29kZS1zaWduZWQgb3Igbm90YXJpemVkKiouIENvbnNlcXVlbnRseSwgb3BlcmF0aW5nLXN5c3RlbSBzZWN1cml0eSBtZWNoYW5pc21zIG1heSBkaXNwbGF5IGEgd2FybmluZyB3aGVuIHRoZSBhcHBsaWNhdGlvbiBpcyBsYXVuY2hlZCBmb3IgdGhlIGZpcnN0IHRpbWUuCgotICoqV2luZG93czoqKiBNaWNyb3NvZnQgU21hcnRTY3JlZW4gbWF5IHJlcG9ydCB0aGF0IHRoZSBwdWJsaXNoZXIgaXMgdW5rbm93biBvciBhc2sgZm9yIGNvbmZpcm1hdGlvbiBiZWZvcmUgcnVubmluZyB0aGUgYXBwbGljYXRpb24uCi0gKiptYWNPUzoqKiBHYXRla2VlcGVyIG1heSByZXBvcnQgdGhhdCB0aGUgZGV2ZWxvcGVyIGNhbm5vdCBiZSB2ZXJpZmllZCBhbmQgbWF5IHJlcXVpcmUgdGhlIHVzZXIgdG8gZXhwbGljaXRseSBhbGxvdyBvciBvcGVuIHRoZSBhcHBsaWNhdGlvbi4KLSAqKkxpbnV4OioqIEFwcEltYWdlIGZpbGVzIGFyZSBub3Qgbm9ybWFsbHkgYWZmZWN0ZWQgYnkgYW4gZXF1aXZhbGVudCBwdWJsaXNoZXItc2lnbmluZyB3YXJuaW5nLCBidXQgdGhlIGV4ZWN1dGFibGUgcGVybWlzc2lvbiBtYXkgbmVlZCB0byBiZSBlbmFibGVkIGJlZm9yZSBmaXJzdCB1c2UuCgpUaGVzZSB3YXJuaW5ncyBhcmUgZXhwZWN0ZWQgZm9yIHVuc2lnbmVkIHNvZnR3YXJlIGRvd25sb2FkZWQgZnJvbSB0aGUgSW50ZXJuZXQgYW5kIGluZGljYXRlIHRoYXQgdGhlIG9wZXJhdGluZyBzeXN0ZW0gY2Fubm90IHZlcmlmeSBhIGNvZGUtc2lnbmluZyBpZGVudGl0eSBmb3IgdGhlIHB1Ymxpc2hlci4gVGhleSBhcmUgc2VwYXJhdGUgZnJvbSB0aGUgc2NpZW50aWZpYyBvcGVyYXRpb24gb2YgdGhlIHByb2dyYW0uCgpGb3IgYWRkaXRpb25hbCB2ZXJpZmljYXRpb24sIGVhY2ggR2l0SHViIHJlbGVhc2UgaW5jbHVkZXMgYFNIQTI1NlNVTVMudHh0YCwgY29udGFpbmluZyBTSEEtMjU2IGNoZWNrc3VtcyBmb3IgdGhlIGRpc3RyaWJ1dGVkIGFwcGxpY2F0aW9uIGZpbGVzLiBVc2VycyB3aG8gcmVxdWlyZSBzdHJpY3Qgc29mdHdhcmUgcHJvdmVuYW5jZSBjYW4gY29tcGFyZSB0aGUgY2hlY2tzdW0gb2YgdGhlIGRvd25sb2FkZWQgZmlsZSB3aXRoIHRoZSB2YWx1ZSBwdWJsaXNoZWQgaW4gdGhlIHJlbGVhc2UuCgpUaGUgYXBwbGljYXRpb24gc291cmNlIGNvZGUgYW5kIHRoZSBHaXRIdWIgQWN0aW9ucyBidWlsZCB3b3JrZmxvdyB1c2VkIHRvIGNyZWF0ZSB0aGUgZGlzdHJpYnV0ZWQgcGFja2FnZXMgYXJlIHB1YmxpYyBpbiB0aGlzIHJlcG9zaXRvcnkuCgojIyAyLjQgUnVubmluZyBmcm9tIHNvdXJjZSAvIGNvbW1hbmQgbGluZQoKVGhlIFB5dGhvbiBzb3VyY2UgdmVyc2lvbiByZW1haW5zIHRoZSBwcmVmZXJyZWQgaW50ZXJmYWNlIGZvciBhZHZhbmNlZCBjb21tYW5kLWxpbmUgb3B0aW9ucywgc2NyaXB0aW5nIGFuZCByZXByb2R1Y2libGUgYXV0b21hdGVkIHdvcmtmbG93cy4KClJlcXVpcmVtZW50cyBmb3IgdGhlICoqc291cmNlIHZlcnNpb24gb25seSoqOgoKLSBQeXRob24gMy45IG9yIG5ld2VyCi0gTnVtUHkKCkluc3RhbGwgdGhlIGRlcGVuZGVuY3kgd2l0aDoKCmBgYGJhc2gKcHl0aG9uMyAtbSBwaXAgaW5zdGFsbCAtciByZXF1aXJlbWVudHMudHh0CmBgYAoKT24gRGViaWFuLCBOdW1QeSBjYW4gYWx0ZXJuYXRpdmVseSBiZSBpbnN0YWxsZWQgd2l0aDoKCmBgYGJhc2gKc3VkbyBhcHQgaW5zdGFsbCBweXRob24zLW51bXB5CmBgYAoKQ2hlY2sgdGhlIHNjcmlwdCB2ZXJzaW9uIGFuZCBhdmFpbGFibGUgb3B0aW9ucyB3aXRoOgoKYGBgYmFzaApweXRob24zIG9yY2FfcGVkX2FuYWx5emVyLnB5IC0tdmVyc2lvbgpweXRob24zIG9yY2FfcGVkX2FuYWx5emVyLnB5IC0taGVscApgYGAKCkV4cGVjdGVkIHB1YmxpYyB2ZXJzaW9uOgoKYGBgdGV4dApvcmNhX3BlZF9hbmFseXplci5weSAyLjkuMApgYGAKCg=="
+          DISCLAIMER_B64: "IyAyMS4gRGV2ZWxvcG1lbnQgYW5kIHZhbGlkYXRpb24gZGlzY2xhaW1lcgoKSSBhbSBwcmltYXJpbHkgYSAqKnVzZXIgb2YgY29tcHV0YXRpb25hbCBjaGVtaXN0cnkgc29mdHdhcmUgYW5kIGFuIGFtYXRldXIgcHJvZ3JhbW1lcioqLCByYXRoZXIgdGhhbiBhIHByb2Zlc3Npb25hbCBzb2Z0d2FyZSBkZXZlbG9wZXIuIFRoZSBkZXZlbG9wbWVudCBvZiBPUkNBIFBFRCBBbmFseXplciBtYWRlIGV4dGVuc2l2ZSB1c2Ugb2YgKipBSS1hc3Npc3RlZCBwcm9ncmFtbWluZyoqLiBUbyByZWR1Y2UgdGhlIHJpc2sgb2YgaW50cm9kdWNpbmcgdW5ub3RpY2VkIGVycm9ycywgSSBkZXZlbG9wZWQgdGhlIHByb2dyYW0gaW5jcmVtZW50YWxseSwgdGVzdGluZyBpbmRpdmlkdWFsIGNvbXBvbmVudHMgYW5kIHN1Y2Nlc3NpdmUgdmVyc2lvbnMgYWdhaW5zdCByZWFsIGNvbXB1dGF0aW9uYWwgb3V0cHV0cyBhbmQgY2hlY2tpbmcgdGhlIGNvbnNpc3RlbmN5IG9mIHRoZSByZXN1bHRzIGF0IGVhY2ggc3RhZ2UuCgpGb3IgdGhlIHN5c3RlbXMgdGVzdGVkIHNvIGZhciwgdGhlIHJlc3VsdHMgYW5kIHZpYnJhdGlvbmFsIGFzc2lnbm1lbnRzIHByb2R1Y2VkIGJ5IHRoZSBwcm9ncmFtIGhhdmUgYmVlbiBmdWxseSBjb25zaXN0ZW50IHdpdGggdGhlIGV4cGVjdGVkIGJlaGF2aW91ci4gTmV2ZXJ0aGVsZXNzLCB1c2VycyBhcmUgc3Ryb25nbHkgZW5jb3VyYWdlZCB0byB2YWxpZGF0ZSB0aGUgc29mdHdhcmUgb24gKip3ZWxsLXVuZGVyc3Rvb2QgY29tcHV0YXRpb25hbCB0ZXN0IGNhc2VzKiogYmVmb3JlIHJlbHlpbmcgb24gaXQgZm9yIG5ldyBzY2llbnRpZmljIHByb2JsZW1zLiBUaGlzIGlzIGdvb2QgcHJhY3RpY2UgZm9yIGFueSBzY2llbnRpZmljIHNvZnR3YXJlLCBhbmQgaXMgcGFydGljdWxhcmx5IHZhbHVhYmxlIGhlcmUgYmVjYXVzZSBpbmRlcGVuZGVudCB0ZXN0aW5nIGNhbiByZXZlYWwgaW1wbGVtZW50YXRpb24gYnVncywgcHJvYmxlbWF0aWMgYXNzaWdubWVudHMsIGVkZ2UgY2FzZXMsIG9yIG1ldGhvZG9sb2dpY2FsIG1pc3Rha2VzIHRoYXQgSSBtYXkgaGF2ZSBvdmVybG9va2VkLgoKSWYgeW91IGZpbmQgYW55IHN1Y2ggaXNzdWUsIHBsZWFzZSByZXBvcnQgaXQuIElkZW50aWZ5aW5nIGFuZCBjb3JyZWN0aW5nIGVycm9ycyB3aWxsIG9ubHkgbWFrZSB0aGUgc29mdHdhcmUgbW9yZSByZWxpYWJsZSBhbmQgdXNlZnVsIHRvIHRoZSB3aWRlciBjb21tdW5pdHkuIENvbnRyaWJ1dGlvbnMsIHZhbGlkYXRpb24gY2FzZXMsIGNyaXRpY2lzbSwgYW5kIHN1Z2dlc3RlZCBpbXByb3ZlbWVudHMgYXJlIHRoZXJlZm9yZSBzaW5jZXJlbHkgYXBwcmVjaWF0ZWQuICoqVGhhbmsgeW91IGZvciBoZWxwaW5nIGltcHJvdmUgdGhpcyBvcGVuLXNvdXJjZSBwcm9qZWN0LioqCgo="
         run: |
           python3 - <<'PY'
-          import base64
-          import os
           from pathlib import Path
-
+          import base64, os
           p = Path('docs/ORCA_PED_Analyzer_Manual.md')
           text = p.read_text(encoding='utf-8')
-
-          text = text.replace('date: "Version 2026.08.11-vpt2.8"', 'date: "Version 2.9.0"')
-          text = text.replace('# 1. Main features of version 2.8', '# 1. Main features of version 2.9.0')
-          text = text.replace('Version 2.8 keeps the preceding translational/rotational entries', 'Version 2.9.0 keeps the preceding translational/rotational entries')
-          text = text.replace('# 4. Quick start', '# 4. Command-line quick start')
-
-          old_start = text.index('# 2. Requirements and version check')
-          old_end = text.index('# 3. Which Hessian should be used?')
-          new_section = base64.b64decode(os.environ['NEW_SECTION_B64']).decode('utf-8')
-          text = text[:old_start] + new_section + text[old_end:]
-
-          marker = '# 1. Main features of version 2.9.0\n\n'
-          if marker in text and '**Desktop applications.**' not in text:
-              text = text.replace(marker, marker + '- **Desktop applications.** Pre-built Linux AppImage, Windows executable and macOS DMG packages provide a graphical interface without requiring a local Python installation.\n', 1)
-
-          p.write_text(text, encoding='utf-8')
+          section = base64.b64decode(os.environ['DISCLAIMER_B64']).decode('utf-8')
+          if '# 21. Development and validation disclaimer' not in text:
+              marker = '\\newpage\n\n# Appendix A - How the script assigns normal modes: from the Hessian to a chemical label'
+              if marker not in text:
+                  raise SystemExit('Appendix marker not found')
+              text = text.replace(marker, section + '\n\\newpage\n\n# Appendix A - How the script assigns normal modes: from the Hessian to a chemical label', 1)
+              p.write_text(text, encoding='utf-8')
           PY
 
       - name: Install PDF build dependencies
@@ -52,19 +41,15 @@ jobs:
 
       - name: Build PDF manual
         run: |
-          pandoc docs/ORCA_PED_Analyzer_Manual.md --from markdown --pdf-engine=xelatex --output docs/ORCA_PED_Analyzer_Manual.pdf
-
-      - name: Upload manual PDF for verification
-        uses: actions/upload-artifact@v4
-        with:
-          name: ORCA-PED-Analyzer-Manual-v2.9.0
-          path: docs/ORCA_PED_Analyzer_Manual.pdf
-          if-no-files-found: error
+          pandoc docs/ORCA_PED_Analyzer_Manual.md \
+            --from markdown \
+            --pdf-engine=xelatex \
+            --output docs/ORCA_PED_Analyzer_Manual.pdf
 
       - name: Commit updated manual
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add docs/ORCA_PED_Analyzer_Manual.md docs/ORCA_PED_Analyzer_Manual.pdf
-          git commit -m 'Update manual for v2.9.0 desktop applications'
+          git commit -m 'Add development and validation disclaimer to manual'
           git push origin HEAD:main
