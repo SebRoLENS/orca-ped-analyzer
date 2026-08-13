@@ -224,10 +224,6 @@ Suggested general citation:
 
 > Romi, S. (2026). *ORCA PED Analyzer* (Version 2.8.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.21916122
 
-Suggested ACS/JACS-style citation:
-
-> Romi, S. *ORCA PED Analyzer*, version 2.8.0; Zenodo, 2026. https://doi.org/10.5281/zenodo.21916122.
-
 For other journals, please adapt punctuation and ordering to the journal's required reference style while retaining the author, software title, version, year, and DOI.
 
 ## Acknowledgements and contributions
