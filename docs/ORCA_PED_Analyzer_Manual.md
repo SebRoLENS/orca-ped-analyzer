@@ -2,7 +2,7 @@
 title: "ORCA PED Analyzer"
 subtitle: "User and Method Manual"
 author: "SebRoLENS"
-date: "Version 2026.08.11-vpt2.8"
+date: "Version 2.9.0"
 geometry: margin=22mm
 fontsize: 10pt
 header-includes:
@@ -56,8 +56,9 @@ molecule_analysis/
 
 The PED and Avogadro vectors describe **harmonic normal modes**. When a valid VPT2 calculation is available, VPT2 fundamental frequencies are used in the relevant tables and spectra, while overtone and combination bands are read directly from the ORCA VPT2 output.
 
-# 1. Main features of version 2.8
+# 1. Main features of version 2.9.0
 
+- **Desktop applications.** Pre-built Linux AppImage, Windows executable and macOS DMG packages provide a graphical interface without requiring a local Python installation.
 - **Single output directory.** All generated files are written to `BASENAME_analysis/` by default.
 - **Three IR spectra.** Fundamentals; anharmonic-only overtone/combination bands; complete spectrum.
 - **Automatic VPT2 preference.** If VPT2 is complete and numerically valid, fundamental spectra and tables use the VPT2 fundamental frequencies; otherwise harmonic frequencies are retained.
@@ -67,37 +68,118 @@ The PED and Avogadro vectors describe **harmonic normal modes**. When a valid VP
 - **Manifest.** Each run records the script version, inputs, VPT2 state, IR broadening parameters and generated files.
 - **Molecule-agnostic PED.** Topological assignments, generic families and primitive internal coordinates with phase remain available.
 
-# 2. Requirements and version check
+# 2. Ways to run ORCA PED Analyzer
 
-Requirements:
+ORCA PED Analyzer can be used either as a **pre-built desktop application** or directly from the Python source code. For most users, the desktop application is the simplest option because it does not require a Python environment or terminal commands.
+
+## 2.1 Pre-built desktop applications - recommended for most users
+
+Ready-to-run applications are provided on the GitHub Releases page:
+
+<https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest>
+
+The current release provides:
+
+| Platform | Package | Notes |
+|---|---|---|
+| Linux x86_64 | `ORCA-PED-Analyzer-Linux-x86_64.AppImage` | portable AppImage |
+| Windows x86_64 | `ORCA-PED-Analyzer.exe` | standalone executable |
+| macOS Apple Silicon | `ORCA-PED-Analyzer-macOS-arm64.dmg` | for Apple M-series Macs |
+| macOS Intel x86_64 | `ORCA-PED-Analyzer-macOS-x86_64.dmg` | for Intel-based Macs |
+
+The packaged applications already contain Python and the required Python dependencies. Therefore, when using these builds, **Python, NumPy and a terminal are not required**.
+
+### Linux
+
+1. Download `ORCA-PED-Analyzer-Linux-x86_64.AppImage` from the latest GitHub release.
+2. Mark the file as executable. This can usually be done from the file manager under **Properties -> Permissions**, or from a terminal with:
+
+```bash
+chmod +x ORCA-PED-Analyzer-Linux-x86_64.AppImage
+```
+
+3. Double-click the AppImage to launch ORCA PED Analyzer.
+
+The AppImage is portable and does not require a traditional installation. It can be kept in any convenient directory.
+
+### Windows
+
+1. Download `ORCA-PED-Analyzer.exe` from the latest GitHub release.
+2. Save it in a convenient directory.
+3. Double-click the executable to launch the program.
+
+No Python installation or separate installer is required.
+
+### macOS - Apple Silicon or Intel
+
+1. Select the DMG matching the Mac architecture:
+   - `ORCA-PED-Analyzer-macOS-arm64.dmg` for Apple Silicon (M-series);
+   - `ORCA-PED-Analyzer-macOS-x86_64.dmg` for Intel Macs.
+2. Open the downloaded DMG.
+3. Copy **ORCA PED Analyzer.app** to the `Applications` folder or another preferred location.
+4. Launch the application normally from Finder.
+
+No Python installation is required.
+
+## 2.2 Using the graphical application
+
+The graphical launcher is intentionally simple and runs the same scientific analysis engine as the command-line program.
+
+1. Select the **central ORCA `.hess` file**.
+2. If available, select the completed VPT2/GVPT2 `.out` file. This step is optional.
+3. Select an output directory if a location different from the default is desired.
+4. Start the analysis.
+
+The generated PED tables, assignments, spectra, VPT2 information and Avogadro CJSON files are the same scientific outputs produced by the corresponding command-line analysis.
+
+The central Hessian rule remains unchanged when using the GUI: displaced VPT2 Hessians such as `molecule_D001.hess` must not be used as the main input.
+
+## 2.3 Security warnings and unsigned builds
+
+The current desktop applications are **not digitally code-signed or notarized**. Consequently, operating-system security mechanisms may display a warning when the application is launched for the first time.
+
+- **Windows:** Microsoft SmartScreen may report that the publisher is unknown or ask for confirmation before running the application.
+- **macOS:** Gatekeeper may report that the developer cannot be verified and may require the user to explicitly allow or open the application.
+- **Linux:** AppImage files are not normally affected by an equivalent publisher-signing warning, but the executable permission may need to be enabled before first use.
+
+These warnings are expected for unsigned software downloaded from the Internet and indicate that the operating system cannot verify a code-signing identity for the publisher. They are separate from the scientific operation of the program.
+
+For additional verification, each GitHub release includes `SHA256SUMS.txt`, containing SHA-256 checksums for the distributed application files. Users who require strict software provenance can compare the checksum of the downloaded file with the value published in the release.
+
+The application source code and the GitHub Actions build workflow used to create the distributed packages are public in this repository.
+
+## 2.4 Running from source / command line
+
+The Python source version remains the preferred interface for advanced command-line options, scripting and reproducible automated workflows.
+
+Requirements for the **source version only**:
 
 - Python 3.9 or newer
 - NumPy
 
-Check the environment:
+Install the dependency with:
 
 ```bash
-python3 --version
-python3 -c "import numpy; print(numpy.__version__)"
+python3 -m pip install -r requirements.txt
 ```
 
-On Debian, if required:
+On Debian, NumPy can alternatively be installed with:
 
 ```bash
 sudo apt install python3-numpy
 ```
 
-Check the script version:
+Check the script version and available options with:
 
 ```bash
 python3 orca_ped_analyzer.py --version
 python3 orca_ped_analyzer.py --help
 ```
 
-Expected version:
+Expected public version:
 
 ```text
-orca_ped_analyzer.py 2026.08.11-vpt2.8
+orca_ped_analyzer.py 2.9.0
 ```
 
 # 3. Which Hessian should be used?
@@ -134,7 +216,7 @@ are intermediate ORCA files used to construct the anharmonic force field. They a
 
 **Practical rule:** use one central `.hess` for the PED. Add VPT2 information by supplying the associated ORCA `.out`; do not switch to a displaced Hessian.
 
-# 4. Quick start
+# 4. Command-line quick start
 
 ## 4.1 Minimum command
 
@@ -346,7 +428,7 @@ VPT2 corrects state energies and transition frequencies but does not provide the
 
 ## 10.2 Why does Avogadro start the first real vibration at mode 6?
 
-Avogadro numbers vibration entries sequentially. Version 2.8 keeps the preceding translational/rotational entries in the CJSON so that the number displayed by Avogadro matches the ORCA/PED Hessian mode number. For a typical nonlinear molecule:
+Avogadro numbers vibration entries sequentially. Version 2.9.0 keeps the preceding translational/rotational entries in the CJSON so that the number displayed by Avogadro matches the ORCA/PED Hessian mode number. For a typical nonlinear molecule:
 
 ```text
 Avogadro mode 1-5  -> translational/rotational near-zero entries
