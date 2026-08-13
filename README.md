@@ -205,7 +205,7 @@ The manual explains the workflow from the Hessian to the Wilson `B` matrix, inte
 Current public version:
 
 ```text
-2.8.0
+2.9.0
 ```
 
 Check the installed script with:
@@ -222,7 +222,7 @@ The archived release is available on Zenodo with DOI **10.5281/zenodo.21916122**
 
 Suggested general citation:
 
-> Romi, S. (2026). *ORCA PED Analyzer* (Version 2.8.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.21916122
+> Romi, S. (2026). *ORCA PED Analyzer* (Version 2.9.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.21916122
 
 For other journals, please adapt punctuation and ordering to the journal's required reference style while retaining the author, software title, version, year, and DOI.
 

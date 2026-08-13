@@ -57,7 +57,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import numpy as np
 
-__version__ = "2.8.0"
+__version__ = "2.9.0"
 
 BOHR_TO_ANG = 0.529177210903
 FREQ_FACTOR = 5140.487143715827  # sqrt(Eh/(bohr^2*amu))/(2*pi*c) -> cm^-1
