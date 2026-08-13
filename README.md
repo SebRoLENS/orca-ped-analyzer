@@ -75,6 +75,25 @@ python3 orca_ped_analyzer.py molecule.hess \
 
 Do **not** use displaced VPT2 Hessians such as `molecule_D001.hess` as input. The script always uses the central Hessian.
 
+## Desktop application builds
+
+A thin graphical launcher is included in [`orca_ped_analyzer_gui.py`](orca_ped_analyzer_gui.py). It lets users select the central `.hess` file, optionally select a VPT2/GVPT2 `.out` file, choose an output directory, and run the same analysis engine used by the command-line program.
+
+GitHub Actions build infrastructure is included for tagged releases and produces platform-specific desktop packages:
+
+- **Linux x86_64:** AppImage
+- **Windows x86_64:** standalone `.exe`
+- **macOS Apple Silicon:** `.dmg` containing the `.app`
+- **macOS Intel x86_64:** `.dmg` containing the `.app`
+
+The packaged applications include Python and the required Python dependencies, so end users do not need to install Python or NumPy separately.
+
+**AppImage is a Linux-only format**; there is no single executable format that runs unchanged on Linux, Windows, and macOS. The GitHub Actions workflow therefore builds each target on its native operating system.
+
+Current desktop builds are unsigned. Windows SmartScreen and macOS Gatekeeper may therefore show a security warning for downloaded binaries. Fully warning-free distribution on those platforms requires platform-specific code signing/notarization certificates. On Linux, some desktop environments may require marking the downloaded AppImage as executable before the first launch.
+
+The command-line Python script remains the reference interface for advanced options and reproducible scripted workflows.
+
 ## Default output
 
 For `molecule.hess`, the default output directory is:
