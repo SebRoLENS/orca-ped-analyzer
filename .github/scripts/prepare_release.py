@@ -76,7 +76,7 @@ def update_readme(old_version: str, new_version: str) -> None:
 
     # Never show the previous release DOI as if it belonged to the new release.
     text = re.sub(
-        r"^\[!\[DOI\]\(https://zenodo\.org/badge/DOI/[^)]+\.svg\)\]\(https://doi\.org/[^)]+\)\s*$",
+        r"^\[!\[DOI\]\(https://zenodo\.org/badge/DOI/[^)]+\.svg\)\]\(https://doi\.org/[^)]+\)[ \t]*$",
         "[![Latest release](https://img.shields.io/github/v/release/SebRoLENS/orca-ped-analyzer)]"
         "(https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest)",
         text,
