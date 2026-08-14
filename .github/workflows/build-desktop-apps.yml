@@ -16,6 +16,19 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Read application version
+        run: |
+          VERSION="$(python3 - <<'PY'
+          import re
+          from pathlib import Path
+          m = re.search(r'^__version__\s*=\s*"([^"]+)"', Path('orca_ped_analyzer.py').read_text(), re.M)
+          if not m:
+              raise SystemExit('Version not found')
+          print(m.group(1))
+          PY
+          )"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
       - name: Install system build requirements
         run: |
           sudo apt-get update
@@ -53,13 +66,15 @@ jobs:
           EOF
           wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool-x86_64.AppImage
-          APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 ./appimagetool-x86_64.AppImage ORCA-PED-Analyzer.AppDir ORCA-PED-Analyzer-Linux-x86_64.AppImage
-          chmod +x ORCA-PED-Analyzer-Linux-x86_64.AppImage
+          APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 ./appimagetool-x86_64.AppImage \
+            ORCA-PED-Analyzer.AppDir \
+            "ORCA-PED-Analyzer-v${VERSION}-Linux-x86_64.AppImage"
+          chmod +x "ORCA-PED-Analyzer-v${VERSION}-Linux-x86_64.AppImage"
 
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-linux-x86_64
-          path: ORCA-PED-Analyzer-Linux-x86_64.AppImage
+          path: ORCA-PED-Analyzer-v${{ env.VERSION }}-Linux-x86_64.AppImage
           if-no-files-found: error
 
   windows-exe:
@@ -70,20 +85,30 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+
+      - name: Read application version
+        shell: pwsh
+        run: |
+          $version = python -c "import re,pathlib; t=pathlib.Path('orca_ped_analyzer.py').read_text(); print(re.search(r'^__version__\s*=\s*\"([^\"]+)\"', t, re.M).group(1))"
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Install dependencies
         shell: pwsh
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt "pyinstaller==6.21.0"
           python -c "import tkinter, numpy, orca_ped_analyzer, orca_ped_analyzer_gui; print('GUI imports OK')"
+
       - name: Build Windows executable
         shell: pwsh
         run: |
           pyinstaller --noconfirm --clean --windowed --onefile --name ORCA-PED-Analyzer orca_ped_analyzer_gui.py
+          Move-Item "dist/ORCA-PED-Analyzer.exe" "ORCA-PED-Analyzer-v$env:VERSION-Windows-x86_64.exe"
+
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-windows-x86_64
-          path: dist/ORCA-PED-Analyzer.exe
+          path: ORCA-PED-Analyzer-v${{ env.VERSION }}-Windows-x86_64.exe
           if-no-files-found: error
 
   macos-arm64:
@@ -94,21 +119,33 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+
+      - name: Read application version
+        run: |
+          VERSION="$(python -c 'import re,pathlib; t=pathlib.Path("orca_ped_analyzer.py").read_text(); print(re.search(r"^__version__\s*=\s*\"([^\"]+)\"", t, re.M).group(1))')"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt 'pyinstaller==6.21.0'
           python -c 'import tkinter, numpy, orca_ped_analyzer, orca_ped_analyzer_gui; print("GUI imports OK")'
+
       - name: Build macOS Apple Silicon application
         run: |
           pyinstaller --noconfirm --clean --windowed --onedir --name 'ORCA PED Analyzer' orca_ped_analyzer_gui.py
           mkdir dmg-stage
           ditto 'dist/ORCA PED Analyzer.app' 'dmg-stage/ORCA PED Analyzer.app'
-          hdiutil create -volname 'ORCA PED Analyzer' -srcfolder dmg-stage -ov -format UDZO ORCA-PED-Analyzer-macOS-arm64.dmg
+          hdiutil create \
+            -volname 'ORCA PED Analyzer' \
+            -srcfolder dmg-stage \
+            -ov -format UDZO \
+            "ORCA-PED-Analyzer-v${VERSION}-macOS-arm64.dmg"
+
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-macos-arm64
-          path: ORCA-PED-Analyzer-macOS-arm64.dmg
+          path: ORCA-PED-Analyzer-v${{ env.VERSION }}-macOS-arm64.dmg
           if-no-files-found: error
 
   macos-intel:
@@ -119,21 +156,33 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+
+      - name: Read application version
+        run: |
+          VERSION="$(python -c 'import re,pathlib; t=pathlib.Path("orca_ped_analyzer.py").read_text(); print(re.search(r"^__version__\s*=\s*\"([^\"]+)\"", t, re.M).group(1))')"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt 'pyinstaller==6.21.0'
           python -c 'import tkinter, numpy, orca_ped_analyzer, orca_ped_analyzer_gui; print("GUI imports OK")'
+
       - name: Build macOS Intel application
         run: |
           pyinstaller --noconfirm --clean --windowed --onedir --name 'ORCA PED Analyzer' orca_ped_analyzer_gui.py
           mkdir dmg-stage
           ditto 'dist/ORCA PED Analyzer.app' 'dmg-stage/ORCA PED Analyzer.app'
-          hdiutil create -volname 'ORCA PED Analyzer' -srcfolder dmg-stage -ov -format UDZO ORCA-PED-Analyzer-macOS-x86_64.dmg
+          hdiutil create \
+            -volname 'ORCA PED Analyzer' \
+            -srcfolder dmg-stage \
+            -ov -format UDZO \
+            "ORCA-PED-Analyzer-v${VERSION}-macOS-x86_64.dmg"
+
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-macos-x86_64
-          path: ORCA-PED-Analyzer-macOS-x86_64.dmg
+          path: ORCA-PED-Analyzer-v${{ env.VERSION }}-macOS-x86_64.dmg
           if-no-files-found: error
 
   publish-release-assets:
@@ -147,10 +196,12 @@ jobs:
           pattern: desktop-*
           path: release-assets
           merge-multiple: true
+
       - name: Generate SHA-256 checksums
         run: |
           cd release-assets
           sha256sum * > SHA256SUMS.txt
+
       - name: Upload binaries to GitHub Release
         uses: softprops/action-gh-release@v3
         with:
