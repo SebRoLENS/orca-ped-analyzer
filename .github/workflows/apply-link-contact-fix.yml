@@ -1,0 +1,171 @@
+name: Apply robust links and contact
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/apply-link-contact-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 2
+
+      - name: Apply link and contact fixes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          gui = Path('orca_ped_analyzer_gui.py')
+          text = gui.read_text()
+
+          text = text.replace(
+              'import multiprocessing as mp\nimport queue\nfrom pathlib import Path\nimport sys\nimport traceback\nimport webbrowser\n',
+              'import multiprocessing as mp\nimport os\nimport queue\nfrom pathlib import Path\nimport subprocess\nimport sys\nimport traceback\n'
+          )
+
+          text = text.replace(
+              'MANUAL_URL = "https://github.com/SebRoLENS/orca-ped-analyzer/blob/main/docs/ORCA_PED_Analyzer_Manual.md"\n'
+              'GITHUB_URL = "https://github.com/SebRoLENS/orca-ped-analyzer"\n',
+              'MANUAL_URL = "https://github.com/SebRoLENS/orca-ped-analyzer/blob/main/docs/ORCA_PED_Analyzer_Manual.md"\n'
+              'GITHUB_URL = "https://github.com/SebRoLENS/orca-ped-analyzer"\n'
+              'CONTACT_EMAIL = "romi@lens.unifi.it"\n'
+          )
+
+          anchor = '\n\nclass _QueueStream:'
+          helper = '''\n\ndef _clean_external_environment() -> dict[str, str]:
+              env = os.environ.copy()
+              if sys.platform.startswith("linux"):
+                  original = env.pop("LD_LIBRARY_PATH_ORIG", None)
+                  if original is None:
+                      env.pop("LD_LIBRARY_PATH", None)
+                  else:
+                      env["LD_LIBRARY_PATH"] = original
+                  for key in ("PYTHONHOME", "PYTHONPATH", "QT_PLUGIN_PATH", "QML2_IMPORT_PATH"):
+                      env.pop(key, None)
+              elif sys.platform == "darwin":
+                  env.pop("DYLD_LIBRARY_PATH", None)
+                  env.pop("DYLD_FALLBACK_LIBRARY_PATH", None)
+              return env
+
+
+def _open_external_url(parent: tk.Misc, url: str) -> None:
+              """Open a project URL with the operating system and report failures."""
+              try:
+                  if sys.platform == "win32":
+                      os.startfile(url)  # type: ignore[attr-defined]
+                      return
+
+                  env = _clean_external_environment()
+                  if sys.platform == "darwin":
+                      commands = [["open", url]]
+                  else:
+                      commands = [["xdg-open", url], ["gio", "open", url]]
+
+                  last_error = None
+                  for command in commands:
+                      try:
+                          result = subprocess.run(
+                              command,
+                              env=env,
+                              stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL,
+                              timeout=10,
+                              check=False,
+                          )
+                      except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+                          last_error = exc
+                          continue
+                      if result.returncode == 0:
+                          return
+                      last_error = RuntimeError(f"{command[0]} exited with code {result.returncode}")
+                  raise last_error or RuntimeError("No URL opener is available")
+              except Exception:
+                  messagebox.showwarning(
+                      "Could not open link",
+                      "The link could not be opened automatically.\n\n"
+                      "If this does not work, copy this link into your browser:\n\n"
+                      f"{url}",
+                      parent=parent,
+                  )
+          '''
+          if helper.strip() not in text:
+              text = text.replace(anchor, helper + anchor, 1)
+
+          text = text.replace(
+              'command=lambda: webbrowser.open(MANUAL_URL),',
+              'command=lambda: _open_external_url(self.root, MANUAL_URL),'
+          )
+          text = text.replace(
+              'command=lambda: webbrowser.open(GITHUB_URL),',
+              'command=lambda: _open_external_url(self.root, GITHUB_URL),'
+          )
+
+          old_description = '''                "Normalized diagonal internal-coordinate PED with optional ORCA "
+                "VPT2/GVPT2 integration. The GUI uses the same analysis engine as "
+                "the command-line program."
+          '''
+          new_description = '''                "Normalized diagonal internal-coordinate PED with optional ORCA "
+                "VPT2/GVPT2 integration. The GUI uses the same analysis engine as "
+                "the command-line program.\\n"
+                f"Contact: {CONTACT_EMAIL}"
+          '''
+          text = text.replace(old_description, new_description)
+
+          text = text.replace(
+              '    print(f"ORCA PED Analyzer {core.__version__}")\n'
+              '    print(f"Manual: {MANUAL_URL}")\n',
+              '    print(f"ORCA PED Analyzer {core.__version__}")\n'
+              '    print(f"Contact: {CONTACT_EMAIL}")\n'
+              '    print(f"Manual: {MANUAL_URL}")\n'
+          )
+
+          gui.write_text(text)
+
+          core = Path('orca_ped_analyzer.py')
+          text = core.read_text()
+          text = text.replace(
+              'GITHUB_URL = "https://github.com/SebRoLENS/orca-ped-analyzer"\n',
+              'GITHUB_URL = "https://github.com/SebRoLENS/orca-ped-analyzer"\n'
+              'CONTACT_EMAIL = "romi@lens.unifi.it"\n'
+          )
+          text = text.replace(
+              '            f"Manual: {MANUAL_URL}\\n"\n'
+              '            f"Check GitHub for updates and new releases: {GITHUB_URL}"\n',
+              '            f"Contact: {CONTACT_EMAIL}\\n"\n'
+              '            f"Manual: {MANUAL_URL}\\n"\n'
+              '            f"Check GitHub for updates and new releases: {GITHUB_URL}"\n'
+          )
+          text = text.replace(
+              '            f"%(prog)s {__version__}\\n"\n'
+              '            f"Manual: {MANUAL_URL}\\n"\n',
+              '            f"%(prog)s {__version__}\\n"\n'
+              '            f"Contact: {CONTACT_EMAIL}\\n"\n'
+              '            f"Manual: {MANUAL_URL}\\n"\n'
+          )
+          text = text.replace(
+              '    print(f"# Manual: {MANUAL_URL}")\n',
+              '    print(f"# Contact: {CONTACT_EMAIL}")\n'
+              '    print(f"# Manual: {MANUAL_URL}")\n'
+          )
+          core.write_text(text)
+          PY
+
+          python3 -m py_compile orca_ped_analyzer.py orca_ped_analyzer_gui.py
+
+      - name: Commit coordinated fix
+        run: |
+          git config user.name 'Sebastiano Romi'
+          git config user.email 'romi@lens.unifi.it'
+          git rm .github/workflows/apply-link-contact-fix.yml
+          git add orca_ped_analyzer.py orca_ped_analyzer_gui.py
+          git commit -m 'Fix project links and add contact information'
+          git push origin HEAD:main
