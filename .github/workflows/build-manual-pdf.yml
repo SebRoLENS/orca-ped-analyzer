@@ -1,0 +1,48 @@
+name: Build manual PDF
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/ORCA_PED_Analyzer_Manual.md'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-manual-pdf
+  cancel-in-progress: false
+
+jobs:
+  build-manual:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Install PDF build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc texlive-xetex texlive-latex-extra texlive-fonts-recommended
+
+      - name: Build PDF manual
+        run: |
+          pandoc docs/ORCA_PED_Analyzer_Manual.md \
+            --from markdown \
+            --pdf-engine=xelatex \
+            --output docs/ORCA_PED_Analyzer_Manual.pdf
+
+      - name: Commit regenerated PDF
+        run: |
+          if git diff --quiet -- docs/ORCA_PED_Analyzer_Manual.pdf; then
+            echo 'PDF is already up to date.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/ORCA_PED_Analyzer_Manual.pdf
+          git commit -m 'Rebuild manual PDF'
+          git push origin HEAD:main
