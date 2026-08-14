@@ -1346,12 +1346,16 @@ def main():
               f"invalid bands omitted={nbadbands} | VPT2 End={vend} | ORCA normal termination={term}")
     print("#")
 
+    # Integrated harmonic IR intensities (km/mol), reconstructed from the
+    # central Hessian $ir_spectrum T**2 values using ORCA's convention.
+    harmonic_intensity_map = harmonic_ir_intensity_map(ir_rows)
+
     topo_func=lambda ic: topology_family_key_and_label(
         ic,elems,ring_edges,ring_atoms,atom_to_system,adj)
     gen_func=lambda ic: generic_family_key_and_label(ic,elems)
 
-    print(f"{'Mode':>5} {'Harm/cm-1':>11} {'VPT2/cm-1':>11}  {'Assignment':<62} Grouped PED")
-    print("-"*172)
+    print(f"{'Mode':>5} {'Harm/cm-1':>11} {'VPT2/cm-1':>11} {'Harm.Int/km mol-1':>18}  {'Assignment':<62} Grouped PED")
+    print("-"*192)
     summaries=[]; detailed=[]; family_rows=[]; mode_assignments={}; mode_groups={}
 
     for col,mi in enumerate(vib):
@@ -1376,7 +1380,9 @@ def main():
         vrow=vpt2_map.get(int(mi))
         vfreq=vrow["fundamental"] if vrow else None
         vtxt=f"{vfreq:11.2f}" if vfreq is not None else f"{'--':>11}"
-        print(f"{mi:5d} {freqs[mi]:11.2f} {vtxt}  {ass:<62} " + "; ".join(gp))
+        hint = harmonic_intensity_map.get(int(mi))
+        hitxt = f"{hint:18.4f}" if hint is not None else f"{'--':>18}"
+        print(f"{mi:5d} {freqs[mi]:11.2f} {vtxt} {hitxt}  {ass:<62} " + "; ".join(gp))
 
         if args.show_generic:
             gg=[]
@@ -1395,7 +1401,9 @@ def main():
                 continue
             phase="+" if D[r,col]>=0 else "-"
             rawpieces.append(f"{ic_label(ics[r],elems)} {pct[r,col]:.2f}%[{phase}]")
-            detailed.append([int(mi),float(freqs[mi]),vfreq,ass,ic_label(ics[r],elems),
+            detailed.append([int(mi),float(freqs[mi]),vfreq,
+                             harmonic_intensity_map.get(int(mi),""),
+                             ass,ic_label(ics[r],elems),
                              ics[r].kind,float(pct[r,col]),phase,float(D[r,col]),float(fdiag[r])])
             rawkeep+=1
             if rawkeep>=args.top:
@@ -1406,7 +1414,10 @@ def main():
         dominant_family=groups[0][2] if groups else float('nan')
         summaries.append([
             int(mi), vrow["vpt2_mode"] if vrow else "", float(freqs[mi]),
+            harmonic_intensity_map.get(int(mi),""),
             vfreq if vfreq is not None else "", vrow["difference"] if vrow else "",
+            (harmonic_intensity_map.get(int(mi),"") if vrow else ""),
+            ("central_hessian_harmonic_IR" if vrow and int(mi) in harmonic_intensity_map else ""),
             ass, "; ".join(gp), "; ".join(rawpieces), float(dominant_family)
         ])
 
@@ -1488,8 +1499,12 @@ def main():
         dfile=str(p)+"_ped.csv"
         with open(sfile,"w",newline="") as fh:
             w=csv.writer(fh)
-            w.writerow(["hess_mode","vpt2_mode","harmonic_frequency_cm-1","vpt2_fundamental_cm-1",
-                        "vpt2_difference_cm-1","assignment","grouped_contributions",
+            w.writerow(["hess_mode","vpt2_mode",
+                        "harmonic_frequency_cm-1","harmonic_intensity_km_mol",
+                        "vpt2_fundamental_cm-1","vpt2_difference_cm-1",
+                        "vpt2_fundamental_intensity_km_mol",
+                        "vpt2_fundamental_intensity_source",
+                        "assignment","grouped_contributions",
                         "top_primitive_ICs","dominant_family_percent"])
             w.writerows(summaries)
         with open(ffile,"w",newline="") as fh:
@@ -1499,7 +1514,8 @@ def main():
             w.writerows(family_rows)
         with open(dfile,"w",newline="") as fh:
             w=csv.writer(fh)
-            w.writerow(["mode","harmonic_frequency_cm-1","vpt2_fundamental_cm-1","assignment",
+            w.writerow(["mode","harmonic_frequency_cm-1","vpt2_fundamental_cm-1",
+                        "harmonic_intensity_km_mol","assignment",
                         "internal_coordinate","type","percent","phase","D_value","F_diagonal"])
             w.writerows(detailed)
         generated_files.extend([str(Path(sfile).resolve()),str(Path(ffile).resolve()),str(Path(dfile).resolve())])
@@ -1507,12 +1523,48 @@ def main():
         print(f"Wrote: {ffile}")
         print(f"Wrote: {dfile}")
 
+        # Unified IR transition table with both harmonic and anharmonic intensities.
+        tfile=str(p)+"_ir_transitions.csv"
+        with open(tfile,"w",newline="") as fh:
+            w=csv.writer(fh)
+            w.writerow([
+                "transition_type","state","hess_mode","vpt2_mode1","vpt2_mode2",
+                "frequency_cm-1","intensity_km_mol","intensity_level",
+                "intensity_source","assignment"
+            ])
+            for mi in vib:
+                mi=int(mi)
+                hint=harmonic_intensity_map.get(mi,"")
+                w.writerow([
+                    "harmonic_fundamental",f"nu{mi}",mi,"","",
+                    float(freqs[mi]),hint,"harmonic",
+                    "central_hessian_$ir_spectrum",mode_assignments.get(mi,"")
+                ])
+                vr=vpt2_map.get(mi)
+                if vr:
+                    w.writerow([
+                        "vpt2_fundamental",f"nu{vr['vpt2_mode']}",mi,
+                        vr["vpt2_mode"],"",vr["fundamental"],hint,
+                        "harmonic_intensity_at_VPT2_frequency",
+                        "central_hessian_$ir_spectrum",
+                        mode_assignments.get(mi,"")
+                    ])
+            for br in band_rows:
+                state,m1,m2,h1,h2,freq,eps,inten,t2,tx,ty,tz,assignment=br
+                w.writerow([
+                    "vpt2_overtone" if m1==m2 else "vpt2_combination",
+                    state,"",m1,m2,freq,inten,"anharmonic",
+                    "ORCA_VPT2_overtone_combination_Int",assignment
+                ])
+        generated_files.append(str(Path(tfile).resolve()))
+        print(f"Wrote: {tfile}")
+
         if vpt2 and vpt2.get("valid"):
             bfile=str(p)+"_vpt2_bands.csv"
             with open(bfile,"w",newline="") as fh:
                 w=csv.writer(fh)
                 w.writerow(["state","vpt2_mode1","vpt2_mode2","hess_mode1","hess_mode2",
-                            "frequency_cm-1","eps_L_mol_cm","intensity_km_mol","T2","Tx","Ty","Tz",
+                            "frequency_cm-1","eps_L_mol_cm","anharmonic_intensity_km_mol","T2","Tx","Ty","Tz",
                             "zero_order_assignment"])
                 w.writerows(band_rows)
             generated_files.append(str(Path(bfile).resolve()))
