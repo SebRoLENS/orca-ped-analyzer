@@ -1,0 +1,65 @@
+name: Build manual PDF
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/ORCA_PED_Analyzer_Manual.md'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-manual-pdf
+  cancel-in-progress: false
+
+jobs:
+  build-manual:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Install PDF build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc texlive-xetex texlive-latex-extra texlive-fonts-recommended
+
+      - name: Build and commit current PDF manual
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            pandoc docs/ORCA_PED_Analyzer_Manual.md \
+              --from markdown \
+              --pdf-engine=xelatex \
+              --output docs/ORCA_PED_Analyzer_Manual.pdf
+
+            if [ -z "$(git status --porcelain -- docs/ORCA_PED_Analyzer_Manual.pdf)" ]; then
+              echo 'PDF is already up to date.'
+              exit 0
+            fi
+
+            git add docs/ORCA_PED_Analyzer_Manual.pdf
+            git commit -m 'Rebuild manual PDF'
+
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+
+            echo "main changed while the PDF was being built; rebuilding from the latest manual (${attempt}/3)."
+            sleep 2
+          done
+
+          echo 'Could not commit the regenerated PDF after three attempts.'
+          exit 1
