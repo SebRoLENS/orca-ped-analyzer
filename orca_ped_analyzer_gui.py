@@ -12,11 +12,12 @@ The scientific PED/VPT2 implementation remains in orca_ped_analyzer.py.
 from __future__ import annotations
 
 import multiprocessing as mp
+import os
 import queue
 from pathlib import Path
+import subprocess
 import sys
 import traceback
-import webbrowser
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
@@ -24,6 +25,67 @@ import orca_ped_analyzer as core
 
 MANUAL_URL = "https://github.com/SebRoLENS/orca-ped-analyzer/blob/main/docs/ORCA_PED_Analyzer_Manual.md"
 GITHUB_URL = "https://github.com/SebRoLENS/orca-ped-analyzer"
+CONTACT_EMAIL = "romi@lens.unifi.it"
+
+
+def _clean_external_environment() -> dict[str, str]:
+    """Remove frozen-app variables that can break external browser launchers."""
+    env = os.environ.copy()
+    if sys.platform.startswith("linux"):
+        original = env.pop("LD_LIBRARY_PATH_ORIG", None)
+        if original is None:
+            env.pop("LD_LIBRARY_PATH", None)
+        else:
+            env["LD_LIBRARY_PATH"] = original
+        for key in ("PYTHONHOME", "PYTHONPATH", "QT_PLUGIN_PATH", "QML2_IMPORT_PATH"):
+            env.pop(key, None)
+    elif sys.platform == "darwin":
+        env.pop("DYLD_LIBRARY_PATH", None)
+        env.pop("DYLD_FALLBACK_LIBRARY_PATH", None)
+    return env
+
+
+def _open_external_url(parent: tk.Misc, url: str) -> None:
+    """Open a URL with the operating system and show the explicit URL on failure."""
+    try:
+        if sys.platform == "win32":
+            os.startfile(url)  # type: ignore[attr-defined]
+            return
+
+        env = _clean_external_environment()
+        commands = [["open", url]] if sys.platform == "darwin" else [
+            ["xdg-open", url],
+            ["gio", "open", url],
+        ]
+
+        last_error: Exception | None = None
+        for command in commands:
+            try:
+                result = subprocess.run(
+                    command,
+                    env=env,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=5,
+                    check=False,
+                )
+            except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+                last_error = exc
+                continue
+            if result.returncode == 0:
+                return
+            last_error = RuntimeError(
+                f"{command[0]} exited with code {result.returncode}"
+            )
+        raise last_error or RuntimeError("No URL opener is available")
+    except Exception:
+        messagebox.showwarning(
+            "Could not open link",
+            "The link could not be opened automatically.\n\n"
+            "If this does not work, copy this link into your browser:\n\n"
+            f"{url}",
+            parent=parent,
+        )
 
 
 class _QueueStream:
@@ -136,12 +198,12 @@ class AnalyzerGUI:
         ttk.Button(
             outer,
             text="User manual",
-            command=lambda: webbrowser.open(MANUAL_URL),
+            command=lambda: _open_external_url(self.root, MANUAL_URL),
         ).grid(row=0, column=1, sticky="e", padx=(8, 0), pady=(0, 4))
         ttk.Button(
             outer,
             text="Check GitHub for updates",
-            command=lambda: webbrowser.open(GITHUB_URL),
+            command=lambda: _open_external_url(self.root, GITHUB_URL),
         ).grid(row=0, column=2, sticky="e", padx=(8, 0), pady=(0, 4))
 
         ttk.Label(
@@ -149,7 +211,8 @@ class AnalyzerGUI:
             text=(
                 "Normalized diagonal internal-coordinate PED with optional ORCA "
                 "VPT2/GVPT2 integration. The GUI uses the same analysis engine as "
-                "the command-line program."
+                "the command-line program.\n"
+                f"Contact: {CONTACT_EMAIL}"
             ),
             wraplength=720,
             justify="left",
@@ -555,6 +618,7 @@ def _print_terminal_resources() -> None:
     if getattr(sys, "stdout", None) is None:
         return
     print(f"ORCA PED Analyzer {core.__version__}")
+    print(f"Contact: {CONTACT_EMAIL}")
     print(f"Manual: {MANUAL_URL}")
     print(f"Check GitHub for updates and new releases: {GITHUB_URL}")
     print()

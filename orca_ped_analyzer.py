@@ -60,6 +60,7 @@ import numpy as np
 __version__ = "2.9.2"
 MANUAL_URL = "https://github.com/SebRoLENS/orca-ped-analyzer/blob/main/docs/ORCA_PED_Analyzer_Manual.md"
 GITHUB_URL = "https://github.com/SebRoLENS/orca-ped-analyzer"
+CONTACT_EMAIL = "romi@lens.unifi.it"
 
 BOHR_TO_ANG = 0.529177210903
 FREQ_FACTOR = 5140.487143715827  # sqrt(Eh/(bohr^2*amu))/(2*pi*c) -> cm^-1
@@ -1115,6 +1116,7 @@ def main():
     ap=argparse.ArgumentParser(
         description="Automatic molecule-agnostic PED assignment from an ORCA .hess file, with optional VPT2 integration",
         epilog=(
+            f"Contact: {CONTACT_EMAIL}\n"
             f"Manual: {MANUAL_URL}\n"
             f"Check GitHub for updates and new releases: {GITHUB_URL}"
         ),
@@ -1126,6 +1128,7 @@ def main():
         action="version",
         version=(
             f"%(prog)s {__version__}\n"
+            f"Contact: {CONTACT_EMAIL}\n"
             f"Manual: {MANUAL_URL}\n"
             f"Check GitHub for updates and new releases: {GITHUB_URL}"
         ),
@@ -1183,6 +1186,7 @@ def main():
                     help="IR grid spacing in cm^-1 (default 1)")
     args=ap.parse_args()
 
+    print(f"# Contact: {CONTACT_EMAIL}")
     print(f"# Manual: {MANUAL_URL}")
     print(f"# Check GitHub for updates and new releases: {GITHUB_URL}")
     print("#")
