@@ -18,6 +18,16 @@ README = ROOT / "README.md"
 CITATION = ROOT / "CITATION.cff"
 
 VERSION_RE = re.compile(r'^__version__\s*=\s*"(\d+\.\d+\.\d+)"', re.M)
+VERSION_BADGE_RE = re.compile(
+    r"^\[!\[(?:Latest release|Version)\]\([^)]+\)\]\([^)]+\)[ \t]*$", re.M
+)
+DOI_BADGE_RE = re.compile(
+    r"^\[!\[DOI\]\([^)]+\)\]\([^)]+\)[ \t]*$", re.M
+)
+VERSION_BADGE = (
+    "[![Version](https://img.shields.io/github/v/release/SebRoLENS/orca-ped-analyzer)]"
+    "(https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest)"
+)
 
 
 def current_version() -> str:
@@ -52,15 +62,13 @@ def extract_doi(record: dict) -> str | None:
 
 
 def zenodo_records(query: str) -> list[dict]:
-    # Zenodo currently limits unauthenticated search requests to at most
-    # 25 records per page.  Asking for more returns HTTP 400.
     params = urllib.parse.urlencode({"q": query, "size": 25})
     url = f"https://zenodo.org/api/records?{params}"
     req = urllib.request.Request(
         url,
         headers={
             "Accept": "application/json",
-            "User-Agent": "orca-ped-analyzer-release-bot/1.1",
+            "User-Agent": "orca-ped-analyzer-release-bot/1.2",
         },
     )
     try:
@@ -83,9 +91,6 @@ def zenodo_records(query: str) -> list[dict]:
 
 
 def find_doi(version: str) -> str | None:
-    # Try both the project title and the exact version.  Local filtering below
-    # still requires the expected title/version pair, so unrelated records are
-    # ignored even if Zenodo's search ranking changes.
     queries = [
         '"ORCA PED Analyzer"',
         f'"ORCA PED Analyzer" AND "{version}"',
@@ -140,17 +145,30 @@ def replace_section(text: str, heading: str, next_heading: str, body: str) -> st
     return pattern.sub(body.rstrip() + "\n\n", text, count=1)
 
 
+def set_readme_badges(text: str, doi: str) -> str:
+    doi_url = f"https://doi.org/{doi}"
+    doi_badge = f"[![DOI](https://zenodo.org/badge/DOI/{doi}.svg)]({doi_url})"
+
+    if VERSION_BADGE_RE.search(text):
+        text = VERSION_BADGE_RE.sub(VERSION_BADGE, text, count=1)
+    else:
+        title = "# ORCA PED Analyzer\n"
+        if title not in text:
+            raise SystemExit("Could not find ORCA PED Analyzer README title")
+        text = text.replace(title, title + "\n" + VERSION_BADGE + "\n", 1)
+
+    if DOI_BADGE_RE.search(text):
+        text = DOI_BADGE_RE.sub(doi_badge, text, count=1)
+    else:
+        text = text.replace(VERSION_BADGE, VERSION_BADGE + "\n" + doi_badge, 1)
+    return text
+
+
 def apply_metadata(version: str, doi: str) -> None:
     doi_url = f"https://doi.org/{doi}"
 
     text = README.read_text()
-    text = re.sub(
-        r"^\[!\[(?:DOI|Latest release)\]\([^)]+\)\]\([^)]+\)[ \t]*$",
-        f"[![DOI](https://zenodo.org/badge/DOI/{doi}.svg)]({doi_url})",
-        text,
-        count=1,
-        flags=re.M,
-    )
+    text = set_readme_badges(text, doi)
 
     cite = f"""## How to cite
 
