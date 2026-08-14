@@ -7,9 +7,6 @@ on:
         description: 'Tag, branch, or commit to build (defaults to the triggering ref)'
         required: false
         default: ''
-  push:
-    tags:
-      - 'v*.*.*'
 
 permissions:
   contents: write
@@ -78,7 +75,7 @@ jobs:
             "ORCA-PED-Analyzer-v${VERSION}-Linux-x86_64.AppImage"
           chmod +x "ORCA-PED-Analyzer-v${VERSION}-Linux-x86_64.AppImage"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: desktop-linux-x86_64
           path: ORCA-PED-Analyzer-v${{ env.VERSION }}-Linux-x86_64.AppImage
@@ -116,7 +113,7 @@ jobs:
           pyinstaller --noconfirm --clean --windowed --onefile --name ORCA-PED-Analyzer orca_ped_analyzer_gui.py
           Move-Item "dist/ORCA-PED-Analyzer.exe" "ORCA-PED-Analyzer-v$env:VERSION-Windows-x86_64.exe"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: desktop-windows-x86_64
           path: ORCA-PED-Analyzer-v${{ env.VERSION }}-Windows-x86_64.exe
@@ -155,7 +152,7 @@ jobs:
             -ov -format UDZO \
             "ORCA-PED-Analyzer-v${VERSION}-macOS-arm64.dmg"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: desktop-macos-arm64
           path: ORCA-PED-Analyzer-v${{ env.VERSION }}-macOS-arm64.dmg
@@ -194,7 +191,7 @@ jobs:
             -ov -format UDZO \
             "ORCA-PED-Analyzer-v${VERSION}-macOS-x86_64.dmg"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: desktop-macos-x86_64
           path: ORCA-PED-Analyzer-v${{ env.VERSION }}-macOS-x86_64.dmg
@@ -202,11 +199,11 @@ jobs:
 
   publish-release-assets:
     name: Attach desktop builds to tagged release
-    if: startsWith(github.ref, 'refs/tags/') || startsWith(inputs.source_ref, 'v')
+    if: startsWith(inputs.source_ref, 'v')
     needs: [linux-appimage, windows-exe, macos-arm64, macos-intel]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: desktop-*
           path: release-assets
@@ -220,6 +217,6 @@ jobs:
       - name: Upload binaries to GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ inputs.source_ref || github.ref_name }}
+          tag_name: ${{ inputs.source_ref }}
           files: release-assets/*
           fail_on_unmatched_files: true
