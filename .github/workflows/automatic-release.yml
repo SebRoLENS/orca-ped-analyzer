@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'orca_ped_analyzer.py'
+      - 'orca_ped_analyzer_gui.py'
 
 permissions:
   contents: write
@@ -66,7 +67,7 @@ jobs:
           cat > /tmp/release-notes.md <<EOF
           ## ORCA PED Analyzer v${VERSION}
 
-          Automated release generated after an update to \`orca_ped_analyzer.py\`.
+          Automated release generated after an update to the ORCA PED Analyzer source code.
 
           Desktop applications are built automatically for Linux x86_64, Windows x86_64,
           macOS Apple Silicon, and macOS Intel.
@@ -174,7 +175,7 @@ jobs:
           cat > /tmp/release-notes.md <<EOF
           ## ORCA PED Analyzer v${VERSION}
 
-          Automated release generated after an update to \`orca_ped_analyzer.py\`.
+          Automated release generated after an update to the ORCA PED Analyzer source code.
 
           Desktop applications are available for Linux x86_64, Windows x86_64,
           macOS Apple Silicon, and macOS Intel.
