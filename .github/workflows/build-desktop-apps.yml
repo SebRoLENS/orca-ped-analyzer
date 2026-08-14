@@ -89,7 +89,9 @@ jobs:
       - name: Read application version
         shell: pwsh
         run: |
-          $version = python -c "import re,pathlib; t=pathlib.Path('orca_ped_analyzer.py').read_text(); print(re.search(r'^__version__\s*=\s*\"([^\"]+)\"', t, re.M).group(1))"
+          $match = Get-Content orca_ped_analyzer.py | Select-String '^__version__\s*=\s*"([^"]+)"' | Select-Object -First 1
+          if (-not $match) { throw 'Version not found' }
+          $version = $match.Matches[0].Groups[1].Value
           "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Install dependencies
