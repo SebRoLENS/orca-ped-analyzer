@@ -96,7 +96,7 @@ def apply_metadata(version: str, doi: str) -> None:
 
     text = README.read_text()
     text = re.sub(
-        r"^\[!\[(?:DOI|Latest release)\]\([^)]+\)\]\([^)]+\)\s*$",
+        r"^\[!\[(?:DOI|Latest release)\]\([^)]+\)\]\([^)]+\)[ \t]*$",
         f"[![DOI](https://zenodo.org/badge/DOI/{doi}.svg)]({doi_url})",
         text,
         count=1,
