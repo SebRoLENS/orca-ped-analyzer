@@ -1,0 +1,117 @@
+name: Restore original 2.x versioning
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/rollback-version-series.yml'
+
+permissions:
+  contents: write
+  actions: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Validate rollback script
+        run: python3 -m py_compile .github/scripts/rollback_version_series.py
+
+      - name: Restore original releases, tags and current metadata
+        run: python3 .github/scripts/rollback_version_series.py
+
+      - name: Rebuild v2.9.4 PDF manual
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc texlive-xetex texlive-latex-extra texlive-fonts-recommended
+          pandoc docs/ORCA_PED_Analyzer_Manual.md \
+            --from markdown \
+            --pdf-engine=xelatex \
+            --output docs/ORCA_PED_Analyzer_Manual.pdf
+
+      - name: Validate restored metadata
+        run: |
+          python3 -m py_compile orca_ped_analyzer.py orca_ped_analyzer_gui.py
+          grep -q '__version__ = "2.9.4"' orca_ped_analyzer.py
+          grep -q 'Current public version: \*\*2.9.4\*\*' README.md
+          grep -q 'version: "2.9.4"' CITATION.cff
+          grep -q 'Version 2.9.4' docs/ORCA_PED_Analyzer_Manual.md
+
+      - name: Commit restored current metadata and remove rollback files
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/rollback-version-series.yml .github/scripts/rollback_version_series.py
+          git add orca_ped_analyzer.py README.md CITATION.cff \
+            docs/ORCA_PED_Analyzer_Manual.md docs/ORCA_PED_Analyzer_Manual.pdf
+          git commit -m 'Restore original ORCA PED Analyzer 2.x versioning'
+          git push origin HEAD:main
+          echo "FINAL_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Make v2.9.4 point to restored current main
+        run: |
+          git tag -f v2.9.4 "$FINAL_SHA"
+          git push --force origin refs/tags/v2.9.4
+          RELEASE_ID="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/v2.9.4" --jq '.id')"
+          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
+            -f target_commitish=main \
+            -f name='ORCA PED Analyzer v2.9.4' >/dev/null
+
+      - name: Build clean v2.9.4 desktop artifacts
+        run: |
+          gh workflow run build-desktop-apps.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f source_ref=main
+
+          RUN_ID=""
+          for attempt in $(seq 1 30); do
+            RUN_ID="$(
+              gh api \
+                "repos/${GITHUB_REPOSITORY}/actions/workflows/build-desktop-apps.yml/runs?event=workflow_dispatch&head_sha=${FINAL_SHA}&per_page=10" \
+                --jq '.workflow_runs[0].id // empty'
+            )"
+            if [ -n "$RUN_ID" ]; then
+              break
+            fi
+            sleep 4
+          done
+          if [ -z "$RUN_ID" ]; then
+            echo 'Could not locate dispatched desktop build.'
+            exit 1
+          fi
+          gh run watch "$RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status
+          echo "DESKTOP_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+
+      - name: Replace v2.9.4 release assets
+        run: |
+          mkdir -p release-assets
+          gh run download "$DESKTOP_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern 'desktop-*' \
+            --dir release-assets
+
+          find release-assets -mindepth 2 -type f -print0 | while IFS= read -r -d '' file; do
+            mv "$file" "release-assets/$(basename "$file")"
+          done
+          find release-assets -mindepth 1 -type d -empty -delete
+
+          cd release-assets
+          test "$(find . -maxdepth 1 -type f -name 'ORCA-PED-Analyzer-v2.9.4-*' | wc -l)" -eq 4
+          sha256sum ORCA-PED-Analyzer-v2.9.4-* > SHA256SUMS.txt
+          cd ..
+
+          RELEASE_ID="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/v2.9.4" --jq '.id')"
+          gh api "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets" --jq '.[].id' | while read -r ASSET_ID; do
+            [ -z "$ASSET_ID" ] || gh api --method DELETE "repos/${GITHUB_REPOSITORY}/releases/assets/${ASSET_ID}"
+          done
+          gh release upload v2.9.4 release-assets/* --repo "$GITHUB_REPOSITORY"
