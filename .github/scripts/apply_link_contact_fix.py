@@ -99,8 +99,8 @@ def _open_external_url(parent: tk.Misc, url: str) -> None:
     except Exception:
         messagebox.showwarning(
             "Could not open link",
-            "The link could not be opened automatically.\n\n"
-            "If this does not work, copy this link into your browser:\n\n"
+            "The link could not be opened automatically.\\n\\n"
+            "If this does not work, copy this link into your browser:\\n\\n"
             f"{url}",
             parent=parent,
         )
