@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 """One-time migration of ORCA PED Analyzer release numbering.
 
-Renumber GitHub releases/tags without changing their historical commits or assets,
-update the current branch metadata to 1.1.4, and optionally update Zenodo record
-metadata when a ZENODO_TOKEN secret is available.
+GitHub releases and tags are renumbered while preserving historical release
+assets and DOI links. Historical scientific snapshots are left intact; temporary
+branches only normalize GitHub Actions files so the GITHUB_TOKEN can create the
+new tag refs under GitHub's workflow-protection rules.
 """
 
 from __future__ import annotations
 
 import json
 import os
-import re
 import subprocess
-import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -20,13 +19,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 REPO = os.environ.get("GITHUB_REPOSITORY", "SebRoLENS/orca-ped-analyzer")
 
+# old version, new version, target used only when the new tag does not yet exist
 MAPPING = [
-    ("2.8.0", "1.0.0"),
-    ("2.9.0", "1.1.0"),
-    ("2.9.1", "1.1.1"),
-    ("2.9.2", "1.1.2"),
-    ("2.9.3", "1.1.3"),
-    ("2.9.4", "1.1.4"),
+    ("2.8.0", "1.0.0", None),
+    ("2.9.0", "1.1.0", "migration/version-1.1.0"),
+    ("2.9.1", "1.1.1", "migration/version-1.1.1"),
+    ("2.9.2", "1.1.2", "migration/version-1.1.2"),
+    ("2.9.3", "1.1.3", "migration/version-1.1.3"),
+    ("2.9.4", "1.1.4", "migration/version-1.1.4"),
 ]
 CURRENT_OLD = "2.9.4"
 CURRENT_NEW = "1.1.4"
@@ -39,125 +39,139 @@ CURRENT_FILES = [
 ]
 
 
-def run(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+def run(*args: str, check: bool = True, input_text: str | None = None) -> subprocess.CompletedProcess[str]:
     print("+", " ".join(args), flush=True)
-    return subprocess.run(
+    result = subprocess.run(
         args,
         cwd=ROOT,
         text=True,
+        input=input_text,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        check=check,
+        check=False,
     )
+    if result.stdout.strip():
+        print(result.stdout.strip())
+    if result.returncode != 0 and result.stderr.strip():
+        print(result.stderr.strip(), file=os.sys.stderr)
+    if check and result.returncode != 0:
+        raise subprocess.CalledProcessError(
+            result.returncode, result.args, output=result.stdout, stderr=result.stderr
+        )
+    return result
 
 
-def gh_json(endpoint: str) -> dict:
-    result = run("gh", "api", endpoint)
-    return json.loads(result.stdout)
-
-
-def remote_tag_sha(tag: str) -> str | None:
-    result = run("git", "ls-remote", "--tags", "origin", f"refs/tags/v{tag}", check=False)
+def remote_tag_sha(version: str) -> str | None:
+    result = run(
+        "git", "ls-remote", "--tags", "origin", f"refs/tags/v{version}", check=False
+    )
     if result.returncode != 0 or not result.stdout.strip():
         return None
     return result.stdout.split()[0]
 
 
-def create_new_tags() -> None:
-    run("git", "fetch", "origin", "--tags", "--force")
-    for old, new in MAPPING:
-        old_sha = remote_tag_sha(old)
-        if not old_sha:
-            raise SystemExit(f"Historical tag v{old} is missing")
-        new_sha = remote_tag_sha(new)
-        if new_sha:
-            if new_sha != old_sha:
-                raise SystemExit(
-                    f"v{new} already exists at {new_sha}, expected historical commit {old_sha}"
-                )
-            print(f"v{new} already points to the expected commit")
-            continue
-        run("git", "tag", f"v{new}", old_sha)
-        run("git", "push", "origin", f"refs/tags/v{new}")
-
-
-def find_release(old: str, new: str) -> dict:
-    for version in (old, new):
+def release_for(old: str, new: str) -> dict:
+    for version in (new, old):
         result = run(
-            "gh",
-            "api",
-            f"repos/{REPO}/releases/tags/v{version}",
-            check=False,
+            "gh", "api", f"repos/{REPO}/releases/tags/v{version}", check=False
         )
         if result.returncode == 0:
             return json.loads(result.stdout)
-    raise SystemExit(f"Could not find GitHub release for v{old}/v{new}")
+    raise SystemExit(f"Could not find release v{old} or v{new}")
 
 
 def migrate_releases() -> None:
-    for old, new in MAPPING:
-        release = find_release(old, new)
+    for old, new, target in MAPPING:
+        release = release_for(old, new)
         release_id = str(release["id"])
-        current_tag = str(release.get("tag_name", ""))
+        current_tag = str(release.get("tag_name") or "")
         current_name = str(release.get("name") or f"ORCA PED Analyzer v{old}")
         current_body = str(release.get("body") or "")
 
         new_name = current_name.replace(f"v{old}", f"v{new}").replace(old, new)
         new_body = current_body.replace(f"v{old}", f"v{new}").replace(old, new)
 
-        if current_tag != f"v{new}" or current_name != new_name or current_body != new_body:
-            payload = json.dumps(
-                {
-                    "tag_name": f"v{new}",
-                    "name": new_name,
-                    "body": new_body,
-                }
-            )
-            run(
-                "gh",
-                "api",
-                "--method",
-                "PATCH",
-                f"repos/{REPO}/releases/{release_id}",
-                "--input",
-                "-",
-                check=True,
-            ) if False else subprocess.run(
-                [
-                    "gh",
-                    "api",
-                    "--method",
-                    "PATCH",
-                    f"repos/{REPO}/releases/{release_id}",
-                    "--input",
-                    "-",
-                ],
-                cwd=ROOT,
-                input=payload,
-                text=True,
-                check=True,
-            )
+        payload: dict[str, object] = {
+            "tag_name": f"v{new}",
+            "name": new_name,
+            "body": new_body,
+        }
+
+        if remote_tag_sha(new) is None:
+            if not target:
+                raise SystemExit(
+                    f"New tag v{new} does not exist and no safe target was configured"
+                )
+            payload["target_commitish"] = target
+
+        if current_tag == f"v{new}" and current_name == new_name and current_body == new_body:
+            print(f"Release v{new} already migrated")
+            continue
+
+        run(
+            "gh",
+            "api",
+            "--method",
+            "PATCH",
+            f"repos/{REPO}/releases/{release_id}",
+            "--input",
+            "-",
+            input_text=json.dumps(payload),
+        )
+        if remote_tag_sha(new) is None:
+            raise SystemExit(f"GitHub did not create expected tag v{new}")
         print(f"Release v{old} -> v{new}")
 
 
 def delete_old_tags() -> None:
-    for old, _new in MAPPING:
+    # Delete only after every release has a verified new tag.
+    for _old, new, _target in MAPPING:
+        if remote_tag_sha(new) is None:
+            raise SystemExit(f"Refusing cleanup: v{new} is missing")
+
+    for old, _new, _target in MAPPING:
         if remote_tag_sha(old):
-            run("git", "push", "origin", f":refs/tags/v{old}")
+            run(
+                "gh",
+                "api",
+                "--method",
+                "DELETE",
+                f"repos/{REPO}/git/refs/tags/v{old}",
+            )
+            print(f"Deleted old tag v{old}")
 
 
 def update_current_files() -> None:
     for path in CURRENT_FILES:
         text = path.read_text(encoding="utf-8")
         if CURRENT_OLD in text:
-            text = text.replace(CURRENT_OLD, CURRENT_NEW)
-            path.write_text(text, encoding="utf-8")
+            path.write_text(text.replace(CURRENT_OLD, CURRENT_NEW), encoding="utf-8")
         elif CURRENT_NEW not in text:
-            raise SystemExit(f"Neither {CURRENT_OLD} nor {CURRENT_NEW} found in {path}")
+            raise SystemExit(
+                f"Neither {CURRENT_OLD} nor {CURRENT_NEW} found in {path.relative_to(ROOT)}"
+            )
 
     source = (ROOT / "orca_ped_analyzer.py").read_text(encoding="utf-8")
     if f'__version__ = "{CURRENT_NEW}"' not in source:
         raise SystemExit("Current source version was not migrated to 1.1.4")
+
+
+def cleanup_temporary_branches() -> None:
+    for _old, new, target in MAPPING:
+        if not target:
+            continue
+        result = run(
+            "gh",
+            "api",
+            "--method",
+            "DELETE",
+            f"repos/{REPO}/git/refs/heads/{target}",
+            check=False,
+        )
+        if result.returncode == 0:
+            print(f"Deleted temporary branch {target}")
+        else:
+            print(f"Temporary branch {target} could not be deleted automatically")
 
 
 def _zenodo_request(method: str, url: str, token: str, data: dict | None = None):
@@ -170,7 +184,7 @@ def _zenodo_request(method: str, url: str, token: str, data: dict | None = None)
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "User-Agent": "orca-ped-analyzer-version-migration/1.0",
+            "User-Agent": "orca-ped-analyzer-version-migration/1.1",
         },
     )
     try:
@@ -205,10 +219,9 @@ def update_zenodo_metadata_if_possible() -> None:
         if version:
             by_version[version] = dep
 
-    for old, new in MAPPING:
+    for old, new, _target in MAPPING:
         dep = by_version.get(old)
         if dep is None:
-            print(f"No owned Zenodo deposition found for v{old}; skipping")
             continue
         dep_id = dep["id"]
         edit_url = f"https://zenodo.org/api/deposit/depositions/{dep_id}/actions/edit"
@@ -218,7 +231,6 @@ def update_zenodo_metadata_if_possible() -> None:
         try:
             editable = _zenodo_request("POST", edit_url, token)
         except RuntimeError as exc:
-            # If it is already in edit mode, retrieve it and continue.
             if "400" not in str(exc):
                 raise
             editable = _zenodo_request("GET", deposit_url, token)
@@ -231,12 +243,11 @@ def update_zenodo_metadata_if_possible() -> None:
 
 
 def main() -> None:
-    create_new_tags()
     migrate_releases()
     delete_old_tags()
     update_current_files()
     update_zenodo_metadata_if_possible()
-
+    cleanup_temporary_branches()
     print("Version migration completed.")
 
 
