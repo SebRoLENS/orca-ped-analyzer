@@ -12,9 +12,9 @@ For most users, the easiest way to use ORCA PED Analyzer is through the pre-buil
 
 **No Python installation, terminal, or separate NumPy installation is required when using the packaged applications.**
 
-Download the latest release here:
+**[Download the latest release](https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest)**
 
-**[ORCA PED Analyzer releases](https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest)**
+Looking for an older version? **[Browse all releases and previous versions](https://github.com/SebRoLENS/orca-ped-analyzer/releases)**.
 
 Available builds:
 
