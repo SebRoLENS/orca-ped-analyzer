@@ -1,0 +1,99 @@
+name: Finalize renumbered v1.1.4 release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/finalize-v1.1.4-renumber.yml'
+
+permissions:
+  contents: write
+  actions: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify current version
+        run: |
+          grep -q '__version__ = "1.1.4"' orca_ped_analyzer.py
+
+      - name: Build clean v1.1.4 desktop artifacts from current main
+        run: |
+          HEAD_SHA="$(git rev-parse HEAD)"
+          gh workflow run build-desktop-apps.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f source_ref=main
+
+          RUN_ID=""
+          for attempt in $(seq 1 30); do
+            RUN_ID="$(
+              gh api \
+                "repos/${GITHUB_REPOSITORY}/actions/workflows/build-desktop-apps.yml/runs?event=workflow_dispatch&head_sha=${HEAD_SHA}&per_page=10" \
+                --jq '.workflow_runs[0].id // empty'
+            )"
+            if [ -n "$RUN_ID" ]; then
+              break
+            fi
+            sleep 4
+          done
+
+          if [ -z "$RUN_ID" ]; then
+            echo 'Could not locate the dispatched desktop build.'
+            exit 1
+          fi
+
+          echo "Desktop build run: $RUN_ID"
+          gh run watch "$RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status
+          echo "RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+
+      - name: Download and checksum rebuilt applications
+        run: |
+          mkdir -p release-assets
+          gh run download "$RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern 'desktop-*' \
+            --dir release-assets
+
+          find release-assets -mindepth 2 -type f -print0 | while IFS= read -r -d '' file; do
+            mv "$file" "release-assets/$(basename "$file")"
+          done
+          find release-assets -mindepth 1 -type d -empty -delete
+
+          cd release-assets
+          test "$(find . -maxdepth 1 -type f -name 'ORCA-PED-Analyzer-v1.1.4-*' | wc -l)" -eq 4
+          sha256sum ORCA-PED-Analyzer-v1.1.4-* > SHA256SUMS.txt
+
+      - name: Replace v1.1.4 release assets
+        run: |
+          RELEASE_ID="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/v1.1.4" --jq '.id')"
+          gh api "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets" --jq '.[].id' | while read -r ASSET_ID; do
+            [ -z "$ASSET_ID" ] || gh api --method DELETE "repos/${GITHUB_REPOSITORY}/releases/assets/${ASSET_ID}"
+          done
+          gh release upload v1.1.4 release-assets/* --repo "$GITHUB_REPOSITORY"
+
+      - name: Remove one-time finalizer and make v1.1.4 point to clean current source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/finalize-v1.1.4-renumber.yml
+          git commit -m 'Finalize clean v1.1.4 release after renumbering'
+          git push origin HEAD:main
+
+          git tag -f v1.1.4 HEAD
+          git push --force origin refs/tags/v1.1.4
+
+          RELEASE_ID="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/v1.1.4" --jq '.id')"
+          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
+            -f target_commitish=main \
+            -f name='ORCA PED Analyzer v1.1.4' >/dev/null
