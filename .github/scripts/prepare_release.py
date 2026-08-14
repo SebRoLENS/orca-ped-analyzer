@@ -12,10 +12,26 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "orca_ped_analyzer.py"
 README = ROOT / "README.md"
+MANUAL = ROOT / "docs" / "ORCA_PED_Analyzer_Manual.md"
 CITATION = ROOT / "CITATION.cff"
 
 VERSION_RE = re.compile(r'^__version__\s*=\s*"(\d+\.\d+\.\d+)"', re.M)
 SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
+VERSION_BADGE_RE = re.compile(
+    r"^\[!\[(?:Latest release|Version)\]\([^)]+\)\]\([^)]+\)[ \t]*$", re.M
+)
+DOI_BADGE_RE = re.compile(
+    r"^\[!\[DOI\]\([^)]+\)\]\([^)]+\)[ \t]*$", re.M
+)
+
+VERSION_BADGE = (
+    "[![Version](https://img.shields.io/github/v/release/SebRoLENS/orca-ped-analyzer)]"
+    "(https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest)"
+)
+DOI_PENDING_BADGE = (
+    "[![DOI](https://img.shields.io/badge/DOI-pending-lightgrey)]"
+    "(https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest)"
+)
 
 
 def read_version(text: str) -> str:
@@ -70,18 +86,26 @@ def replace_section(text: str, heading: str, next_heading: str, body: str) -> st
     return pattern.sub(body.rstrip() + "\n\n", text, count=1)
 
 
+def update_badges_for_pending_doi(text: str) -> str:
+    if VERSION_BADGE_RE.search(text):
+        text = VERSION_BADGE_RE.sub(VERSION_BADGE, text, count=1)
+    else:
+        title = "# ORCA PED Analyzer\n"
+        if title not in text:
+            raise SystemExit("Could not find ORCA PED Analyzer README title")
+        text = text.replace(title, title + "\n" + VERSION_BADGE + "\n", 1)
+
+    if DOI_BADGE_RE.search(text):
+        text = DOI_BADGE_RE.sub(DOI_PENDING_BADGE, text, count=1)
+    else:
+        text = text.replace(VERSION_BADGE, VERSION_BADGE + "\n" + DOI_PENDING_BADGE, 1)
+    return text
+
+
 def update_readme(old_version: str, new_version: str) -> None:
     text = README.read_text()
     text = text.replace(old_version, new_version)
-
-    # Never show the previous release DOI as if it belonged to the new release.
-    text = re.sub(
-        r"^\[!\[DOI\]\(https://zenodo\.org/badge/DOI/[^)]+\.svg\)\]\(https://doi\.org/[^)]+\)[ \t]*$",
-        "[![Latest release](https://img.shields.io/github/v/release/SebRoLENS/orca-ped-analyzer)]"
-        "(https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest)",
-        text,
-        flags=re.M,
-    )
+    text = update_badges_for_pending_doi(text)
 
     cite = f"""## How to cite
 
@@ -95,6 +119,15 @@ Previous releases remain archived separately on Zenodo.
 """
     text = replace_section(text, "## How to cite", "## Contributions", cite)
     README.write_text(text)
+
+
+def update_manual(old_version: str, new_version: str) -> None:
+    text = MANUAL.read_text()
+    if old_version not in text:
+        raise SystemExit(
+            f"Manual does not contain the current version {old_version}; refusing to tag an inconsistent release"
+        )
+    MANUAL.write_text(text.replace(old_version, new_version))
 
 
 def update_citation(new_version: str) -> None:
@@ -132,6 +165,7 @@ def main() -> None:
     script_text = VERSION_RE.sub(f'__version__ = "{new_version}"', script_text, count=1)
     SCRIPT.write_text(script_text)
     update_readme(old_version, new_version)
+    update_manual(old_version, new_version)
     update_citation(new_version)
     print(new_version)
 
