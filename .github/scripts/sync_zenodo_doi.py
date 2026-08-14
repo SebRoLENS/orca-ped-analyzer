@@ -7,6 +7,7 @@ import argparse
 import json
 import re
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -50,29 +51,77 @@ def extract_doi(record: dict) -> str | None:
     return None
 
 
-def find_doi(version: str) -> str | None:
-    # Broad query + exact local filtering keeps this resilient to Zenodo search-field changes.
-    params = urllib.parse.urlencode({"q": '"ORCA PED Analyzer"', "size": 50})
+def zenodo_records(query: str) -> list[dict]:
+    # Zenodo currently limits unauthenticated search requests to at most
+    # 25 records per page.  Asking for more returns HTTP 400.
+    params = urllib.parse.urlencode({"q": query, "size": 25})
     url = f"https://zenodo.org/api/records?{params}"
     req = urllib.request.Request(
         url,
-        headers={"Accept": "application/json", "User-Agent": "orca-ped-analyzer-release-bot/1.0"},
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "orca-ped-analyzer-release-bot/1.1",
+        },
     )
-    with urllib.request.urlopen(req, timeout=30) as response:
-        payload = json.load(response)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as response:
+            payload = json.load(response)
+    except urllib.error.HTTPError as exc:
+        detail = ""
+        try:
+            detail = exc.read().decode("utf-8", "replace").strip()
+        except Exception:
+            pass
+        message = f"Zenodo API request failed with HTTP {exc.code}"
+        if detail:
+            message += f": {detail}"
+        raise RuntimeError(message) from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Zenodo API request failed: {exc}") from exc
 
-    hits = ((payload.get("hits") or {}).get("hits") or [])
+    return ((payload.get("hits") or {}).get("hits") or [])
+
+
+def find_doi(version: str) -> str | None:
+    # Try both the project title and the exact version.  Local filtering below
+    # still requires the expected title/version pair, so unrelated records are
+    # ignored even if Zenodo's search ranking changes.
+    queries = [
+        '"ORCA PED Analyzer"',
+        f'"ORCA PED Analyzer" AND "{version}"',
+        version,
+    ]
+
     candidates: list[dict] = []
-    for rec in hits:
-        metadata = rec.get("metadata") or {}
-        if str(metadata.get("title", "")).strip() != "ORCA PED Analyzer":
+    seen_ids: set[str] = set()
+    last_error: RuntimeError | None = None
+
+    for query in queries:
+        try:
+            hits = zenodo_records(query)
+        except RuntimeError as exc:
+            last_error = exc
             continue
-        if not version_matches(metadata.get("version"), version):
-            continue
-        if extract_doi(rec):
-            candidates.append(rec)
+
+        for rec in hits:
+            rec_id = str(rec.get("id") or "")
+            if rec_id and rec_id in seen_ids:
+                continue
+            if rec_id:
+                seen_ids.add(rec_id)
+
+            metadata = rec.get("metadata") or {}
+            title = str(metadata.get("title", "")).strip()
+            if title != "ORCA PED Analyzer":
+                continue
+            if not version_matches(metadata.get("version"), version):
+                continue
+            if extract_doi(rec):
+                candidates.append(rec)
 
     if not candidates:
+        if last_error is not None:
+            raise last_error
         return None
 
     candidates.sort(
@@ -139,7 +188,12 @@ def main() -> None:
     args = parser.parse_args()
 
     version = args.version or current_version()
-    doi = find_doi(version)
+    try:
+        doi = find_doi(version)
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        raise SystemExit(3)
+
     if not doi:
         print(f"Zenodo DOI for v{version} not found yet.", file=sys.stderr)
         raise SystemExit(2)
