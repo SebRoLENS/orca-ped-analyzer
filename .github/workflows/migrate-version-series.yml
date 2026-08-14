@@ -1,0 +1,57 @@
+name: Migrate release numbering to 1.x
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/migrate-version-series.yml'
+
+permissions:
+  contents: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  ZENODO_TOKEN: ${{ secrets.ZENODO_TOKEN }}
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Validate migration script
+        run: python3 -m py_compile .github/scripts/migrate_version_series.py
+
+      - name: Migrate GitHub tags, releases and current metadata
+        run: python3 .github/scripts/migrate_version_series.py
+
+      - name: Rebuild current PDF manual
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc texlive-xetex texlive-latex-extra texlive-fonts-recommended
+          pandoc docs/ORCA_PED_Analyzer_Manual.md \
+            --from markdown \
+            --pdf-engine=xelatex \
+            --output docs/ORCA_PED_Analyzer_Manual.pdf
+
+      - name: Validate migrated source
+        run: |
+          python3 -m py_compile orca_ped_analyzer.py orca_ped_analyzer_gui.py
+          grep -q '__version__ = "1.1.4"' orca_ped_analyzer.py
+          grep -q 'Current public version: \*\*1.1.4\*\*' README.md
+          grep -q 'version: "1.1.4"' CITATION.cff
+          grep -q 'Version 1.1.4' docs/ORCA_PED_Analyzer_Manual.md
+
+      - name: Commit migrated current metadata and remove one-time migration files
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/migrate-version-series.yml .github/scripts/migrate_version_series.py
+          git add orca_ped_analyzer.py README.md CITATION.cff \
+            docs/ORCA_PED_Analyzer_Manual.md docs/ORCA_PED_Analyzer_Manual.pdf
+          git commit -m 'Renumber ORCA PED Analyzer releases to 1.x series'
+          git push origin HEAD:main
