@@ -87,10 +87,10 @@ jobs:
           VERSION: ${{ steps.prepare.outputs.version }}
           RELEASE_SHA: ${{ steps.commit.outputs.commit_sha }}
         run: |
-          gh api \
-            --method POST \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/build-desktop-apps.yml/dispatches" \
-            -f "ref=v${VERSION}"
+          gh workflow run build-desktop-apps.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f "source_ref=v${VERSION}"
 
           echo "Waiting for the desktop-build workflow to start..."
           RUN_ID=""
