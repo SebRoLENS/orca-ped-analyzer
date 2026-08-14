@@ -29,6 +29,11 @@ jobs:
           ref: main
           fetch-depth: 2
 
+      - name: Install manual build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc texlive-xetex texlive-latex-extra texlive-fonts-recommended
+
       - name: Prepare next version
         id: prepare
         run: |
@@ -36,13 +41,21 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Preparing ORCA PED Analyzer v$VERSION"
 
+      - name: Build versioned PDF manual
+        run: |
+          pandoc docs/ORCA_PED_Analyzer_Manual.md \
+            --from markdown \
+            --pdf-engine=xelatex \
+            --output docs/ORCA_PED_Analyzer_Manual.pdf
+
       - name: Commit release metadata
         id: commit
         run: |
           VERSION="${{ steps.prepare.outputs.version }}"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add orca_ped_analyzer.py README.md CITATION.cff
+          git add orca_ped_analyzer.py README.md CITATION.cff \
+            docs/ORCA_PED_Analyzer_Manual.md docs/ORCA_PED_Analyzer_Manual.pdf
           git commit -m "Prepare v${VERSION} release"
           git push origin HEAD:main
           SHA="$(git rev-parse HEAD)"
@@ -116,6 +129,7 @@ jobs:
 
   sync-zenodo-doi:
     needs: prepare-release
+    if: ${{ always() && needs.prepare-release.outputs.version != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -131,20 +145,25 @@ jobs:
           DOI=""
           for attempt in $(seq 1 60); do
             set +e
-            DOI="$(python3 .github/scripts/sync_zenodo_doi.py --version "$VERSION" 2>/dev/null)"
+            DOI="$(python3 .github/scripts/sync_zenodo_doi.py --version "$VERSION")"
             STATUS=$?
             set -e
+
             if [ "$STATUS" -eq 0 ] && [ -n "$DOI" ]; then
               echo "Found Zenodo DOI: $DOI"
               break
             fi
-            echo "Zenodo record for v${VERSION} not visible yet (attempt ${attempt}/60)."
+
+            if [ "$STATUS" -eq 3 ]; then
+              echo "Zenodo API error on attempt ${attempt}/60; retrying."
+            else
+              echo "Zenodo record for v${VERSION} not visible yet (attempt ${attempt}/60)."
+            fi
             sleep 60
           done
 
           if [ -z "$DOI" ]; then
             echo "Zenodo DOI was not found within one hour."
-            echo "Rerun this workflow manually after Zenodo has archived the release."
             exit 1
           fi
 
