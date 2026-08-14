@@ -2,7 +2,7 @@
 title: "ORCA PED Analyzer"
 subtitle: "User and Method Manual"
 author: "Sebastiano Romi"
-date: "Version 1.1.4"
+date: "Version 2.9.4"
 geometry: margin=22mm
 fontsize: 10pt
 header-includes:
@@ -60,7 +60,7 @@ molecule_analysis/
 
 The PED and Avogadro vectors describe **harmonic normal modes**. When a valid VPT2 calculation is available, VPT2 fundamental frequencies are used in the relevant tables and spectra, while overtone and combination bands are read directly from the ORCA VPT2 output.
 
-# 1. Main features of version 1.1.4
+# 1. Main features of version 2.9.4
 
 - **Desktop applications.** Pre-built Linux AppImage, Windows executable and macOS DMG packages provide a graphical interface without requiring a local Python installation.
 - **Single output directory.** All generated files are written to `BASENAME_analysis/` by default.
@@ -181,7 +181,7 @@ python3 orca_ped_analyzer.py --help
 Expected public version:
 
 ```text
-orca_ped_analyzer.py 1.1.4
+orca_ped_analyzer.py 2.9.4
 ```
 
 # 3. Which Hessian should be used?
@@ -430,7 +430,7 @@ VPT2 corrects state energies and transition frequencies but does not provide the
 
 ## 10.2 Why does Avogadro start the first real vibration at mode 6?
 
-Avogadro numbers vibration entries sequentially. Version 1.1.4 keeps the preceding translational/rotational entries in the CJSON so that the number displayed by Avogadro matches the ORCA/PED Hessian mode number. For a typical nonlinear molecule:
+Avogadro numbers vibration entries sequentially. Version 2.9.4 keeps the preceding translational/rotational entries in the CJSON so that the number displayed by Avogadro matches the ORCA/PED Hessian mode number. For a typical nonlinear molecule:
 
 ```text
 Avogadro mode 1-5  -> translational/rotational near-zero entries

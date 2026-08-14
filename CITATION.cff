@@ -9,7 +9,7 @@ authors:
 repository-code: "https://github.com/SebRoLENS/orca-ped-analyzer"
 doi: "10.5281/zenodo.21935626"
 url: "https://doi.org/10.5281/zenodo.21935626"
-version: "1.1.4"
+version: "2.9.4"
 date-released: 2026-08-14
 license: MIT
 keywords:
