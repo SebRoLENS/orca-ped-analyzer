@@ -1,7 +1,7 @@
 ---
 title: "ORCA PED Analyzer"
 subtitle: "User and Method Manual"
-author: "SebRoLENS"
+author: "Sebastiano Romi"
 date: "Version 2.9.1"
 geometry: margin=22mm
 fontsize: 10pt
@@ -12,6 +12,10 @@ header-includes:
     \usepackage{microtype}
     \usepackage{amsmath}
 ---
+
+**Author:** Sebastiano Romi  
+**Affiliation:** European Laboratory for non-Linear Spectroscopy (LENS), Università degli Studi di Firenze (UNIFI)  
+**Contact:** [romi@lens.unifi.it](mailto:romi@lens.unifi.it)
 
 # Purpose
 

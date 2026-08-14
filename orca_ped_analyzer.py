@@ -58,6 +58,8 @@ from pathlib import Path
 import numpy as np
 
 __version__ = "2.9.1"
+MANUAL_URL = "https://github.com/SebRoLENS/orca-ped-analyzer/blob/main/docs/ORCA_PED_Analyzer_Manual.md"
+GITHUB_URL = "https://github.com/SebRoLENS/orca-ped-analyzer"
 
 BOHR_TO_ANG = 0.529177210903
 FREQ_FACTOR = 5140.487143715827  # sqrt(Eh/(bohr^2*amu))/(2*pi*c) -> cm^-1
@@ -1111,10 +1113,23 @@ def grouped_assignment(groups, pct_col, D_col, mixed_second=20.0, pure_threshold
 
 def main():
     ap=argparse.ArgumentParser(
-        description="Automatic molecule-agnostic PED assignment from an ORCA .hess file, with optional VPT2 integration"
+        description="Automatic molecule-agnostic PED assignment from an ORCA .hess file, with optional VPT2 integration",
+        epilog=(
+            f"Manual: {MANUAL_URL}\n"
+            f"Check GitHub for updates and new releases: {GITHUB_URL}"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     ap.add_argument("hess", help="central ORCA .hess file (never a _Dxxx displaced Hessian)")
-    ap.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    ap.add_argument(
+        "--version",
+        action="version",
+        version=(
+            f"%(prog)s {__version__}\n"
+            f"Manual: {MANUAL_URL}\n"
+            f"Check GitHub for updates and new releases: {GITHUB_URL}"
+        ),
+    )
     ap.add_argument("--vpt2-out",default=None,
                     help="ORCA VPT2 .out file. If omitted, SAME_BASENAME.out is auto-detected")
     ap.add_argument("--no-auto-vpt2",action="store_true",
@@ -1167,6 +1182,10 @@ def main():
     ap.add_argument("--ir-step",type=float,default=1.0,
                     help="IR grid spacing in cm^-1 (default 1)")
     args=ap.parse_args()
+
+    print(f"# Manual: {MANUAL_URL}")
+    print(f"# Check GitHub for updates and new releases: {GITHUB_URL}")
+    print("#")
 
     hess_path=Path(args.hess).expanduser().resolve()
     if args.output_dir:

@@ -16,10 +16,14 @@ import queue
 from pathlib import Path
 import sys
 import traceback
+import webbrowser
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 import orca_ped_analyzer as core
+
+MANUAL_URL = "https://github.com/SebRoLENS/orca-ped-analyzer/blob/main/docs/ORCA_PED_Analyzer_Manual.md"
+GITHUB_URL = "https://github.com/SebRoLENS/orca-ped-analyzer"
 
 
 class _QueueStream:
@@ -127,7 +131,18 @@ class AnalyzerGUI:
             outer,
             text="ORCA PED Analyzer",
             font=("TkDefaultFont", 16, "bold"),
-        ).grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 4))
+        ).grid(row=0, column=0, sticky="w", pady=(0, 4))
+
+        ttk.Button(
+            outer,
+            text="User manual",
+            command=lambda: webbrowser.open(MANUAL_URL),
+        ).grid(row=0, column=1, sticky="e", padx=(8, 0), pady=(0, 4))
+        ttk.Button(
+            outer,
+            text="Check GitHub for updates",
+            command=lambda: webbrowser.open(GITHUB_URL),
+        ).grid(row=0, column=2, sticky="e", padx=(8, 0), pady=(0, 4))
 
         ttk.Label(
             outer,
@@ -536,7 +551,17 @@ class AnalyzerGUI:
         self.root.destroy()
 
 
+def _print_terminal_resources() -> None:
+    if getattr(sys, "stdout", None) is None:
+        return
+    print(f"ORCA PED Analyzer {core.__version__}")
+    print(f"Manual: {MANUAL_URL}")
+    print(f"Check GitHub for updates and new releases: {GITHUB_URL}")
+    print()
+
+
 def main() -> None:
+    _print_terminal_resources()
     root = tk.Tk()
     AnalyzerGUI(root)
     root.mainloop()
