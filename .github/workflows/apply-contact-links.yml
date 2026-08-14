@@ -1,0 +1,144 @@
+name: Apply contact and project links
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/apply-contact-links.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 2
+
+      - name: Update manual, GUI and CLI links
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: Path, old: str, new: str) -> None:
+              text = path.read_text()
+              if old not in text:
+                  raise SystemExit(f"Expected text not found in {path}: {old!r}")
+              path.write_text(text.replace(old, new, 1))
+
+          manual = Path('docs/ORCA_PED_Analyzer_Manual.md')
+          replace_once(manual, 'author: "SebRoLENS"', 'author: "Sebastiano Romi"')
+          replace_once(
+              manual,
+              '\n---\n\n# Purpose\n',
+              '\n---\n\n'
+              '**Author:** Sebastiano Romi  \n'
+              '**Affiliation:** European Laboratory for non-Linear Spectroscopy (LENS), Università degli Studi di Firenze (UNIFI)  \n'
+              '**Contact:** [romi@lens.unifi.it](mailto:romi@lens.unifi.it)\n\n'
+              '# Purpose\n',
+          )
+
+          gui = Path('orca_ped_analyzer_gui.py')
+          replace_once(
+              gui,
+              'import traceback\nimport tkinter as tk\n',
+              'import traceback\nimport webbrowser\nimport tkinter as tk\n',
+          )
+          replace_once(
+              gui,
+              'import orca_ped_analyzer as core\n\n',
+              'import orca_ped_analyzer as core\n\n'
+              'MANUAL_URL = "https://github.com/SebRoLENS/orca-ped-analyzer/blob/main/docs/ORCA_PED_Analyzer_Manual.md"\n'
+              'GITHUB_URL = "https://github.com/SebRoLENS/orca-ped-analyzer"\n\n',
+          )
+          replace_once(
+              gui,
+              '        ).grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 4))\n\n'
+              '        ttk.Label(\n',
+              '        ).grid(row=0, column=0, sticky="w", pady=(0, 4))\n\n'
+              '        ttk.Button(\n'
+              '            outer,\n'
+              '            text="User manual",\n'
+              '            command=lambda: webbrowser.open(MANUAL_URL),\n'
+              '        ).grid(row=0, column=1, sticky="e", padx=(8, 0), pady=(0, 4))\n'
+              '        ttk.Button(\n'
+              '            outer,\n'
+              '            text="Check GitHub for updates",\n'
+              '            command=lambda: webbrowser.open(GITHUB_URL),\n'
+              '        ).grid(row=0, column=2, sticky="e", padx=(8, 0), pady=(0, 4))\n\n'
+              '        ttk.Label(\n',
+          )
+          replace_once(
+              gui,
+              '\ndef main() -> None:\n    root = tk.Tk()\n',
+              '\ndef _print_terminal_resources() -> None:\n'
+              '    if getattr(sys, "stdout", None) is None:\n'
+              '        return\n'
+              '    print(f"ORCA PED Analyzer {core.__version__}")\n'
+              '    print(f"Manual: {MANUAL_URL}")\n'
+              '    print(f"Check GitHub for updates and new releases: {GITHUB_URL}")\n'
+              '    print()\n\n\n'
+              'def main() -> None:\n'
+              '    _print_terminal_resources()\n'
+              '    root = tk.Tk()\n',
+          )
+
+          core = Path('orca_ped_analyzer.py')
+          replace_once(
+              core,
+              '__version__ = "2.9.1"\n\n',
+              '__version__ = "2.9.1"\n'
+              'MANUAL_URL = "https://github.com/SebRoLENS/orca-ped-analyzer/blob/main/docs/ORCA_PED_Analyzer_Manual.md"\n'
+              'GITHUB_URL = "https://github.com/SebRoLENS/orca-ped-analyzer"\n\n',
+          )
+          replace_once(
+              core,
+              '    ap=argparse.ArgumentParser(\n'
+              '        description="Automatic molecule-agnostic PED assignment from an ORCA .hess file, with optional VPT2 integration"\n'
+              '    )\n',
+              '    ap=argparse.ArgumentParser(\n'
+              '        description="Automatic molecule-agnostic PED assignment from an ORCA .hess file, with optional VPT2 integration",\n'
+              '        epilog=(\n'
+              '            f"Manual: {MANUAL_URL}\\n"\n'
+              '            f"Check GitHub for updates and new releases: {GITHUB_URL}"\n'
+              '        ),\n'
+              '        formatter_class=argparse.RawDescriptionHelpFormatter,\n'
+              '    )\n',
+          )
+          replace_once(
+              core,
+              '    ap.add_argument("--version", action="version", version=f"%(prog)s {__version__}")\n',
+              '    ap.add_argument(\n'
+              '        "--version",\n'
+              '        action="version",\n'
+              '        version=(\n'
+              '            f"%(prog)s {__version__}\\n"\n'
+              '            f"Manual: {MANUAL_URL}\\n"\n'
+              '            f"Check GitHub for updates and new releases: {GITHUB_URL}"\n'
+              '        ),\n'
+              '    )\n',
+          )
+          replace_once(
+              core,
+              '    args=ap.parse_args()\n\n',
+              '    args=ap.parse_args()\n\n'
+              '    print(f"# Manual: {MANUAL_URL}")\n'
+              '    print(f"# Check GitHub for updates and new releases: {GITHUB_URL}")\n'
+              '    print("#")\n\n',
+          )
+          PY
+
+          python3 -m py_compile orca_ped_analyzer.py orca_ped_analyzer_gui.py
+
+      - name: Commit coordinated update
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add orca_ped_analyzer.py orca_ped_analyzer_gui.py docs/ORCA_PED_Analyzer_Manual.md
+          git commit -m 'Add author contact and documentation/update links'
+          git push origin HEAD:main
