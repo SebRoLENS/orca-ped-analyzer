@@ -21,6 +21,16 @@ import traceback
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
+import numpy as np
+
+import matplotlib
+matplotlib.use("TkAgg")
+from matplotlib.backends.backend_tkagg import (
+    FigureCanvasTkAgg,
+    NavigationToolbar2Tk,
+)
+from matplotlib.figure import Figure
+
 import orca_ped_analyzer as core
 
 MANUAL_URL = "https://github.com/SebRoLENS/orca-ped-analyzer/blob/main/docs/ORCA_PED_Analyzer_Manual.md"
@@ -149,6 +159,120 @@ def _analysis_process(argv: list[str], message_queue) -> None:
         message_queue.join_thread()
     except Exception:
         pass
+
+
+def _find_ir_dat_files(output_dir: Path) -> list[Path]:
+    """Return the broadened IR .dat spectra written in output_dir, sorted."""
+    if output_dir is None or not output_dir.is_dir():
+        return []
+    return sorted(output_dir.glob("*_IR_*.dat"))
+
+
+def _spectrum_label(path: Path) -> str:
+    """Derive a short legend label (fundamentals/anharmonic/complete/...) from
+    the '<prefix>_IR_<name>.dat' filename produced by orca_ped_analyzer."""
+    stem = path.stem
+    marker = "_IR_"
+    idx = stem.rfind(marker)
+    if idx == -1:
+        return stem
+    return stem[idx + len(marker):] or stem
+
+
+def _load_ir_dat(path: Path) -> tuple[np.ndarray, np.ndarray]:
+    """Load a two-column (wavenumber, relative absorbance) .dat file."""
+    data = np.loadtxt(path, comments="#")
+    if data.ndim == 1:
+        data = data.reshape(1, -1)
+    return data[:, 0], data[:, 1]
+
+
+class SpectraViewer(tk.Toplevel):
+    """Popup window plotting every IR .dat spectrum from a run, each with a
+    checkbox to toggle its visibility on the shared plot."""
+
+    _COLORS = ["#1f77b4", "#d62728", "#2ca02c", "#9467bd", "#ff7f0e", "#8c564b"]
+
+    def __init__(self, parent: tk.Misc, dat_files: list[Path]) -> None:
+        super().__init__(parent)
+        self.title("IR spectra (.dat)")
+        self.minsize(760, 520)
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+
+        container = ttk.Frame(self, padding=10)
+        container.grid(row=0, column=0, sticky="nsew")
+        container.columnconfigure(0, weight=1)
+        container.rowconfigure(1, weight=1)
+
+        selector = ttk.LabelFrame(container, text="Show / hide spectra", padding=8)
+        selector.grid(row=0, column=0, sticky="ew", pady=(0, 8))
+
+        self.figure = Figure(figsize=(7.5, 5.0), dpi=100)
+        self.ax = self.figure.add_subplot(111)
+        self.ax.set_xlabel("Wavenumber (cm$^{-1}$)")
+        self.ax.set_ylabel("Relative absorbance")
+        self.ax.set_title("Broadened IR spectra")
+
+        canvas_frame = ttk.Frame(container)
+        canvas_frame.grid(row=1, column=0, sticky="nsew")
+        canvas_frame.columnconfigure(0, weight=1)
+        canvas_frame.rowconfigure(0, weight=1)
+
+        self.canvas = FigureCanvasTkAgg(self.figure, master=canvas_frame)
+        self.canvas.get_tk_widget().grid(row=0, column=0, sticky="nsew")
+        toolbar_frame = ttk.Frame(canvas_frame)
+        toolbar_frame.grid(row=1, column=0, sticky="ew")
+        NavigationToolbar2Tk(self.canvas, toolbar_frame).update()
+
+        self._vars: dict[str, tk.BooleanVar] = {}
+        self._lines = {}
+        failed: list[str] = []
+
+        for i, path in enumerate(dat_files):
+            label = _spectrum_label(path)
+            try:
+                x, y = _load_ir_dat(path)
+            except Exception:
+                failed.append(path.name)
+                continue
+
+            color = self._COLORS[i % len(self._COLORS)]
+            (line,) = self.ax.plot(x, y, label=label, color=color, linewidth=1.3)
+            self._lines[label] = line
+
+            var = tk.BooleanVar(value=True)
+            self._vars[label] = var
+            ttk.Checkbutton(
+                selector,
+                text=f"{label}  ({path.name})",
+                variable=var,
+                command=lambda lbl=label: self._toggle(lbl),
+            ).pack(side="left", padx=(0, 14))
+
+        if self._lines:
+            self.ax.legend(loc="best")
+        else:
+            self.ax.text(
+                0.5, 0.5, "No readable IR .dat spectra found.",
+                ha="center", va="center", transform=self.ax.transAxes,
+            )
+
+        self.canvas.draw()
+
+        if failed:
+            messagebox.showwarning(
+                "Some spectra could not be read",
+                "The following files could not be parsed:\n" + "\n".join(failed),
+                parent=self,
+            )
+
+    def _toggle(self, label: str) -> None:
+        line = self._lines.get(label)
+        if line is None:
+            return
+        line.set_visible(self._vars[label].get())
+        self.canvas.draw_idle()
 
 
 class AnalyzerGUI:
@@ -532,6 +656,7 @@ class AnalyzerGUI:
             self.status_var.set(
                 f"Analysis completed. Output: {self.last_output_dir}"
             )
+            self._show_spectra_if_available()
         else:
             self.status_var.set("Analysis failed; see the log.")
             self.log.insert(
@@ -546,6 +671,12 @@ class AnalyzerGUI:
 
         self.log.see("end")
         self._cleanup_process()
+
+    def _show_spectra_if_available(self) -> None:
+        dat_files = _find_ir_dat_files(self.last_output_dir)
+        if not dat_files:
+            return
+        SpectraViewer(self.root, dat_files)
 
     def _stop_analysis(self) -> None:
         process = self._process
