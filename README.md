@@ -1,7 +1,7 @@
 # ORCA PED Analyzer
 
 [![Version](https://img.shields.io/github/v/release/SebRoLENS/orca-ped-analyzer)](https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21935626.svg)](https://doi.org/10.5281/zenodo.21935626)
+[![DOI](https://img.shields.io/badge/DOI-pending-lightgrey)](https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest)
 
 **ORCA PED Analyzer** is a molecule-agnostic tool for assigning ORCA harmonic normal modes through potential-energy-distribution (PED) analysis, with optional VPT2/GVPT2 integration, IR-spectrum generation, CSV export, and Avogadro CJSON export.
 
@@ -118,7 +118,7 @@ If you believe the software would benefit from supporting vibrational outputs ge
 
 ## Version
 
-Current public version: **2.9.4**
+Current public version: **2.9.5**
 
 ```bash
 python3 orca_ped_analyzer.py --version
@@ -128,9 +128,9 @@ python3 orca_ped_analyzer.py --version
 
 If ORCA PED Analyzer contributes to published research, please acknowledge or cite the software. GitHub also provides a **Cite this repository** entry from [`CITATION.cff`](CITATION.cff).
 
-> Romi, S. (2026). *ORCA PED Analyzer* (Version 2.9.4) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.21935626
+Version **2.9.5** is archived automatically on Zenodo after the GitHub release is published. The DOI for this release is being assigned and will be inserted here automatically.
 
-DOI: [**10.5281/zenodo.21935626**](https://doi.org/10.5281/zenodo.21935626)
+> Romi, S. (2026). *ORCA PED Analyzer* (Version 2.9.5) [Computer software]. GitHub. https://github.com/SebRoLENS/orca-ped-analyzer/releases/tag/v2.9.5
 
 Previous releases remain archived separately on Zenodo.
 
