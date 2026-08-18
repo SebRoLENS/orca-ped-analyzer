@@ -238,10 +238,12 @@ class SpectraViewer(tk.Toplevel):
                 continue
 
             color = self._COLORS[i % len(self._COLORS)]
+            visible_default = label != "complete"
             (line,) = self.ax.plot(x, y, label=label, color=color, linewidth=1.3)
+            line.set_visible(visible_default)
             self._lines[label] = line
 
-            var = tk.BooleanVar(value=True)
+            var = tk.BooleanVar(value=visible_default)
             self._vars[label] = var
             ttk.Checkbutton(
                 selector,
