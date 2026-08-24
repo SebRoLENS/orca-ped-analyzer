@@ -57,7 +57,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import numpy as np
 
-__version__ = "2.9.6"
+__version__ = "2.9.7"
 MANUAL_URL = "https://github.com/SebRoLENS/orca-ped-analyzer/blob/main/docs/ORCA_PED_Analyzer_Manual.md"
 GITHUB_URL = "https://github.com/SebRoLENS/orca-ped-analyzer"
 CONTACT_EMAIL = "romi@lens.unifi.it"
@@ -66,6 +66,8 @@ BOHR_TO_ANG = 0.529177210903
 FREQ_FACTOR = 5140.487143715827  # sqrt(Eh/(bohr^2*amu))/(2*pi*c) -> cm^-1
 
 # Approximate single-bond covalent radii (Angstrom), mostly Cordero/Pyykko-like.
+# H-Cm (Z = 1-96).  Symbols absent here fall back to 0.77 A in infer_bonds(),
+# with a warning, which silently distorts the inferred connectivity.
 COV_RADII = {
 'H':0.31,'He':0.28,'Li':1.28,'Be':0.96,'B':0.84,'C':0.76,'N':0.71,'O':0.66,'F':0.57,'Ne':0.58,
 'Na':1.66,'Mg':1.41,'Al':1.21,'Si':1.11,'P':1.07,'S':1.05,'Cl':1.02,'Ar':1.06,
@@ -76,16 +78,22 @@ COV_RADII = {
 'Cs':2.44,'Ba':2.15,'La':2.07,'Ce':2.04,'Pr':2.03,'Nd':2.01,'Pm':1.99,'Sm':1.98,'Eu':1.98,
 'Gd':1.96,'Tb':1.94,'Dy':1.92,'Ho':1.92,'Er':1.89,'Tm':1.90,'Yb':1.87,'Lu':1.87,
 'Hf':1.75,'Ta':1.70,'W':1.62,'Re':1.51,'Os':1.44,'Ir':1.41,'Pt':1.36,'Au':1.36,'Hg':1.32,
-'Tl':1.45,'Pb':1.46,'Bi':1.48
+'Tl':1.45,'Pb':1.46,'Bi':1.48,'Po':1.40,'At':1.50,'Rn':1.50,
+'Fr':2.60,'Ra':2.21,'Ac':2.15,'Th':2.06,'Pa':2.00,'U':1.96,'Np':1.90,'Pu':1.87,'Am':1.80,
+'Cm':1.69
 }
 
-# Atomic numbers for Avogadro CJSON export.
+# Atomic numbers for Avogadro CJSON export.  Runs to Og (Z = 118) so that every
+# symbol carrying a covalent radius above also has an atomic number; a symbol
+# missing here makes write_avogadro_cjson() raise.
 _PERIODIC = [
     'H','He','Li','Be','B','C','N','O','F','Ne','Na','Mg','Al','Si','P','S','Cl','Ar',
     'K','Ca','Sc','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',
     'Rb','Sr','Y','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I','Xe',
     'Cs','Ba','La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu',
-    'Hf','Ta','W','Re','Os','Ir','Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn'
+    'Hf','Ta','W','Re','Os','Ir','Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn',
+    'Fr','Ra','Ac','Th','Pa','U','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr',
+    'Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'
 ]
 ATOMIC_NUMBER = {sym:i+1 for i,sym in enumerate(_PERIODIC)}
 
