@@ -1,1 +1,1 @@
-Release trigger 2026-08-25: finalized Pillow/Tk packaging, corrected PyInstaller archive validation, GUI documentation, and desktop packages.
+Release trigger 2026-08-25: finalized Pillow/Tk collection and desktop packaging without fragile archive inspection.
