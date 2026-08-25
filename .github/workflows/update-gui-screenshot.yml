@@ -1,0 +1,69 @@
+name: Update GUI screenshot
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'orca_ped_analyzer_gui.py'
+      - '.github/workflows/update-gui-screenshot.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  screenshot:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Install screenshot dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-venv python3-tk xvfb
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install -r requirements.txt pillow
+
+      - name: Capture current GUI
+        run: |
+          mkdir -p docs
+          xvfb-run -a .venv/bin/python - <<'PY'
+          import time
+          import tkinter as tk
+          from pathlib import Path
+          from PIL import ImageGrab
+          from orca_ped_analyzer_gui import AnalyzerGUI
+
+          root = tk.Tk()
+          AnalyzerGUI(root)
+          root.update_idletasks()
+          root.update()
+          time.sleep(0.5)
+          root.update()
+
+          x = root.winfo_rootx()
+          y = root.winfo_rooty()
+          width = root.winfo_width()
+          height = root.winfo_height()
+          image = ImageGrab.grab(bbox=(x, y, x + width, y + height))
+          image.save(Path('docs/orca_ped_analyzer_gui.png'))
+          root.destroy()
+          PY
+
+      - name: Commit screenshot if changed
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/orca_ped_analyzer_gui.png
+          if git diff --cached --quiet; then
+            echo 'GUI screenshot is already up to date.'
+            exit 0
+          fi
+          git commit -m 'Update GUI screenshot'
+          git push origin HEAD:main
