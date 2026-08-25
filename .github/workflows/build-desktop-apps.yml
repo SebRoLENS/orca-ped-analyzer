@@ -75,7 +75,7 @@ jobs:
             --hidden-import=PIL._tkinter_finder \
             --name ORCA-PED-Analyzer orca_ped_analyzer_gui.py
 
-          .venv/bin/pyi-archive_viewer -r dist/ORCA-PED-Analyzer/ORCA-PED-Analyzer > /tmp/pyinstaller-archive.txt
+          .venv/bin/pyi-archive_viewer -l -r dist/ORCA-PED-Analyzer/ORCA-PED-Analyzer > /tmp/pyinstaller-archive.txt
           grep -q 'PIL._imagingtk' /tmp/pyinstaller-archive.txt
           grep -q 'PIL._tkinter_finder' /tmp/pyinstaller-archive.txt
           echo 'Frozen archive contains the Pillow/Tk bridge modules.'
