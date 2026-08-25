@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -14,6 +15,7 @@ SCRIPT = ROOT / "orca_ped_analyzer.py"
 README = ROOT / "README.md"
 MANUAL = ROOT / "docs" / "ORCA_PED_Analyzer_Manual.md"
 CITATION = ROOT / "CITATION.cff"
+RELEASE_TRIGGER = ROOT / ".release-trigger"
 
 VERSION_RE = re.compile(r'^__version__\s*=\s*"(\d+\.\d+\.\d+)"', re.M)
 SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
@@ -32,6 +34,35 @@ DOI_PENDING_BADGE = (
     "[![DOI](https://img.shields.io/badge/DOI-pending-lightgrey)]"
     "(https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest)"
 )
+
+
+def reject_stale_release_trigger() -> None:
+    """Abort a delayed Actions run when a newer release trigger superseded it."""
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return
+
+    event_sha = os.environ.get("GITHUB_SHA", "").strip()
+    if not event_sha or not RELEASE_TRIGGER.exists():
+        return
+
+    try:
+        event_trigger = subprocess.check_output(
+            ["git", "show", f"{event_sha}:.release-trigger"],
+            cwd=ROOT,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
+    except subprocess.CalledProcessError:
+        # The triggering commit may have changed source code rather than the
+        # release-trigger file. In that case there is nothing to compare.
+        return
+
+    current_trigger = RELEASE_TRIGGER.read_text()
+    if event_trigger != current_trigger:
+        raise SystemExit(
+            "Stale automatic-release run: a newer .release-trigger is already "
+            "present on main. Refusing to create an extra release."
+        )
 
 
 def read_version(text: str) -> str:
@@ -156,6 +187,7 @@ def main() -> None:
     parser.add_argument("--version-only", action="store_true")
     args = parser.parse_args()
 
+    reject_stale_release_trigger()
     old_version, new_version = choose_version()
     if args.version_only:
         print(new_version)
