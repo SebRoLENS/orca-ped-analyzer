@@ -7,6 +7,25 @@
 
 Assignments are derived from the **calculated atomic motion and an internal-coordinate energy decomposition**, rather than from empirical frequency windows.
 
+## Graphical interface
+
+![ORCA PED Analyzer graphical interface](docs/orca_ped_analyzer_gui.png)
+
+The desktop interface exposes the most commonly used analysis options without requiring terminal commands. It uses the same scientific analysis engine as the command-line program.
+
+From the GUI you can:
+
+- select the central ORCA `.hess` file;
+- optionally select a VPT2/GVPT2 `.out` file or let the program auto-detect the matching output;
+- choose a custom output directory;
+- set the IR broadening FWHM;
+- enable generic grouped assignments and/or raw internal-coordinate contributions;
+- follow the analysis through a live log;
+- stop a running analysis;
+- open the user manual or the GitHub update page directly from the application.
+
+After a successful run, if broadened IR `.dat` files are available, the GUI automatically opens an **interactive IR spectrum viewer**. The available spectra can be shown or hidden independently, and the embedded Matplotlib toolbar provides the usual zoom, pan, navigation and save controls.
+
 ## Download and run
 
 For most users, the easiest way to use ORCA PED Analyzer is through the pre-built desktop application.
@@ -24,14 +43,14 @@ Available builds:
 - **macOS Apple Silicon:** `.dmg` containing the `.app`
 - **macOS Intel x86_64:** `.dmg` containing the `.app`
 
-In the graphical launcher:
+Typical GUI workflow:
 
 1. Select the central ORCA `.hess` file.
-2. Optionally select a completed VPT2/GVPT2 `.out` file.
+2. Optionally select a completed VPT2/GVPT2 `.out` file, or leave auto-detection enabled.
 3. Choose the output directory if desired.
-4. Run the analysis.
-
-The packaged applications use the same scientific analysis engine as the command-line version.
+4. Adjust optional assignment/IR settings.
+5. Run the analysis and follow progress in the log.
+6. Inspect the generated IR spectra in the spectrum viewer when available.
 
 > **Note:** the current desktop builds are unsigned. Windows SmartScreen or macOS Gatekeeper may therefore display a warning on first launch. On Linux, the AppImage may need to be marked as executable before running it.
 
@@ -44,8 +63,11 @@ The packaged applications use the same scientific analysis engine as the command
 - Optional ORCA VPT2/GVPT2 integration.
 - Analysis of fundamentals, overtones, and combination bands.
 - Generation of broadened IR spectra.
+- Interactive graphical visualization of generated IR spectra.
+- Configurable IR FWHM from the GUI or command line.
 - CSV export of assignments and PED contributions.
 - Avogadro CJSON export for visualization of harmonic normal modes.
+- Live GUI analysis log and the ability to stop a running analysis.
 
 ## Input and output
 
@@ -69,8 +91,9 @@ For the source version only, the requirements are:
 
 - Python >= 3.9
 - NumPy
+- Matplotlib
 
-Install the dependency with:
+Install the dependencies with:
 
 ```bash
 python3 -m pip install -r requirements.txt
