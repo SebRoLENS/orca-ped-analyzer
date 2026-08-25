@@ -7,9 +7,8 @@ authors:
     given-names: S.
     orcid: "https://orcid.org/0000-0002-9553-7788"
 repository-code: "https://github.com/SebRoLENS/orca-ped-analyzer"
-doi: "10.5281/zenodo.22094113"
-url: "https://doi.org/10.5281/zenodo.22094113"
-version: "2.9.9"
+url: "https://github.com/SebRoLENS/orca-ped-analyzer/releases/tag/v2.9.10"
+version: "2.9.10"
 date-released: 2026-08-25
 license: MIT
 keywords:
