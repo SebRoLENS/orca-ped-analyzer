@@ -46,6 +46,7 @@ jobs:
         run: |
           pandoc docs/ORCA_PED_Analyzer_Manual.md \
             --from markdown \
+            --resource-path=.:docs \
             --pdf-engine=xelatex \
             --output docs/ORCA_PED_Analyzer_Manual.pdf
 
