@@ -141,7 +141,7 @@ If you believe the software would benefit from supporting vibrational outputs ge
 
 ## Version
 
-Current public version: **2.9.8**
+Current public version: **2.9.9**
 
 ```bash
 python3 orca_ped_analyzer.py --version
@@ -151,9 +151,9 @@ python3 orca_ped_analyzer.py --version
 
 If ORCA PED Analyzer contributes to published research, please acknowledge or cite the software. GitHub also provides a **Cite this repository** entry from [`CITATION.cff`](CITATION.cff).
 
-Version **2.9.8** is archived automatically on Zenodo after the GitHub release is published. The DOI for this release is being assigned and will be inserted here automatically.
+Version **2.9.9** is archived automatically on Zenodo after the GitHub release is published. The DOI for this release is being assigned and will be inserted here automatically.
 
-> Romi, S. (2026). *ORCA PED Analyzer* (Version 2.9.8) [Computer software]. GitHub. https://github.com/SebRoLENS/orca-ped-analyzer/releases/tag/v2.9.8
+> Romi, S. (2026). *ORCA PED Analyzer* (Version 2.9.9) [Computer software]. GitHub. https://github.com/SebRoLENS/orca-ped-analyzer/releases/tag/v2.9.9
 
 Previous releases remain archived separately on Zenodo.
 
