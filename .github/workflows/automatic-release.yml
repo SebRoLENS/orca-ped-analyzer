@@ -13,14 +13,13 @@ permissions:
   contents: write
   actions: write
 
-concurrency:
-  group: automatic-release
-  cancel-in-progress: false
-
 jobs:
   prepare-release:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
+    concurrency:
+      group: automatic-release-prepare
+      cancel-in-progress: false
     outputs:
       version: ${{ steps.prepare.outputs.version }}
       commit_sha: ${{ steps.commit.outputs.commit_sha }}
