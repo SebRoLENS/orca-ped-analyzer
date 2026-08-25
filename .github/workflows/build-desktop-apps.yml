@@ -12,13 +12,105 @@ permissions:
   contents: write
 
 jobs:
-  linux-appimage:
-    name: Linux AppImage (x86_64)
+  prepare-icons:
+    name: Prepare desktop icons
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.source_ref || github.ref }}
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install icon conversion tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
+          python -m pip install --upgrade pip
+          python -m pip install Pillow
+
+      - name: Generate PNG, ICO and ICNS from the repository icon
+        run: |
+          mkdir -p generated-icons
+
+          # The canonical repository asset keeps the historical .svg path.
+          # Detect its actual contents so a raster image copied over that path
+          # is handled safely as well.
+          if python3 - <<'PY'
+          from pathlib import Path
+          raw = Path('packaging/orca-ped-analyzer.svg').read_bytes()[:8192].lower()
+          raise SystemExit(0 if b'<svg' in raw else 1)
+          PY
+          then
+            echo 'Icon source detected as SVG.'
+            rsvg-convert \
+              --width 1024 \
+              --height 1024 \
+              packaging/orca-ped-analyzer.svg \
+              -o generated-icons/icon-source.png
+          else
+            echo 'Icon source detected as raster image.'
+            python3 - <<'PY'
+          from PIL import Image
+          image = Image.open('packaging/orca-ped-analyzer.svg').convert('RGBA')
+          image.save('generated-icons/icon-source.png', 'PNG')
+          PY
+          fi
+
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+
+          source = Image.open('generated-icons/icon-source.png').convert('RGBA')
+          source.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
+
+          canvas = Image.new('RGBA', (1024, 1024), (0, 0, 0, 0))
+          x = (1024 - source.width) // 2
+          y = (1024 - source.height) // 2
+          canvas.alpha_composite(source, (x, y))
+
+          png = Path('generated-icons/orca-ped-analyzer.png')
+          ico = Path('generated-icons/orca-ped-analyzer.ico')
+          icns = Path('generated-icons/orca-ped-analyzer.icns')
+
+          canvas.save(png, 'PNG', optimize=True)
+          canvas.save(
+              ico,
+              'ICO',
+              sizes=[(16, 16), (24, 24), (32, 32), (48, 48),
+                     (64, 64), (128, 128), (256, 256)],
+          )
+          canvas.save(icns, 'ICNS')
+
+          for path in (png, ico, icns):
+              with Image.open(path) as check:
+                  check.verify()
+              if path.stat().st_size == 0:
+                  raise SystemExit(f'Generated icon is empty: {path}')
+              print(f'Validated {path} ({path.stat().st_size} bytes)')
+          PY
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: desktop-icons
+          path: generated-icons/orca-ped-analyzer.*
+          if-no-files-found: error
+
+  linux-appimage:
+    name: Linux AppImage (x86_64)
+    needs: prepare-icons
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_ref || github.ref }}
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: desktop-icons
+          path: generated-icons
 
       - name: Read application version
         run: |
@@ -77,8 +169,8 @@ jobs:
 
           mkdir -p ORCA-PED-Analyzer.AppDir/usr/bin
           cp -a dist/ORCA-PED-Analyzer/. ORCA-PED-Analyzer.AppDir/usr/bin/
-          cp packaging/orca-ped-analyzer.svg ORCA-PED-Analyzer.AppDir/orca-ped-analyzer.svg
-          cp packaging/orca-ped-analyzer.svg ORCA-PED-Analyzer.AppDir/.DirIcon
+          cp generated-icons/orca-ped-analyzer.png ORCA-PED-Analyzer.AppDir/orca-ped-analyzer.png
+          cp generated-icons/orca-ped-analyzer.png ORCA-PED-Analyzer.AppDir/.DirIcon
           cat > ORCA-PED-Analyzer.AppDir/AppRun <<'EOF'
           #!/bin/sh
           HERE="$(dirname "$(readlink -f "$0")")"
@@ -122,6 +214,7 @@ jobs:
 
   windows-exe:
     name: Windows executable (x86_64)
+    needs: prepare-icons
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v6
@@ -130,6 +223,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+      - uses: actions/download-artifact@v7
+        with:
+          name: desktop-icons
+          path: generated-icons
 
       - name: Read application version
         shell: pwsh
@@ -150,7 +247,7 @@ jobs:
       - name: Build Windows executable
         shell: pwsh
         run: |
-          pyinstaller --noconfirm --clean --windowed --onefile --collect-all PIL --hidden-import=PIL._imagingtk --hidden-import=PIL._tkinter_finder --name ORCA-PED-Analyzer orca_ped_analyzer_gui.py
+          pyinstaller --noconfirm --clean --windowed --onefile --collect-all PIL --hidden-import=PIL._imagingtk --hidden-import=PIL._tkinter_finder --icon generated-icons/orca-ped-analyzer.ico --name ORCA-PED-Analyzer orca_ped_analyzer_gui.py
           Move-Item "dist/ORCA-PED-Analyzer.exe" "ORCA-PED-Analyzer-v$env:VERSION-Windows-x86_64.exe"
 
       - uses: actions/upload-artifact@v7
@@ -161,6 +258,7 @@ jobs:
 
   macos-arm64:
     name: macOS DMG (Apple Silicon)
+    needs: prepare-icons
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v6
@@ -169,6 +267,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+      - uses: actions/download-artifact@v7
+        with:
+          name: desktop-icons
+          path: generated-icons
 
       - name: Read application version
         run: |
@@ -184,7 +286,7 @@ jobs:
 
       - name: Build macOS Apple Silicon application
         run: |
-          pyinstaller --noconfirm --clean --windowed --onedir --collect-all PIL --hidden-import=PIL._imagingtk --hidden-import=PIL._tkinter_finder --name 'ORCA PED Analyzer' orca_ped_analyzer_gui.py
+          pyinstaller --noconfirm --clean --windowed --onedir --collect-all PIL --hidden-import=PIL._imagingtk --hidden-import=PIL._tkinter_finder --icon generated-icons/orca-ped-analyzer.icns --name 'ORCA PED Analyzer' orca_ped_analyzer_gui.py
           mkdir dmg-stage
           ditto 'dist/ORCA PED Analyzer.app' 'dmg-stage/ORCA PED Analyzer.app'
           hdiutil create \
@@ -201,6 +303,7 @@ jobs:
 
   macos-intel:
     name: macOS DMG (Intel x86_64)
+    needs: prepare-icons
     runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v6
@@ -209,6 +312,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+      - uses: actions/download-artifact@v7
+        with:
+          name: desktop-icons
+          path: generated-icons
 
       - name: Read application version
         run: |
@@ -224,7 +331,7 @@ jobs:
 
       - name: Build macOS Intel application
         run: |
-          pyinstaller --noconfirm --clean --windowed --onedir --collect-all PIL --hidden-import=PIL._imagingtk --hidden-import=PIL._tkinter_finder --name 'ORCA PED Analyzer' orca_ped_analyzer_gui.py
+          pyinstaller --noconfirm --clean --windowed --onedir --collect-all PIL --hidden-import=PIL._imagingtk --hidden-import=PIL._tkinter_finder --icon generated-icons/orca-ped-analyzer.icns --name 'ORCA PED Analyzer' orca_ped_analyzer_gui.py
           mkdir dmg-stage
           ditto 'dist/ORCA PED Analyzer.app' 'dmg-stage/ORCA PED Analyzer.app'
           hdiutil create \
