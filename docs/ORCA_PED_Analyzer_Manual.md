@@ -50,6 +50,7 @@ molecule_analysis/
   molecule_families.csv
   molecule_ped.csv                  # default PED run
   molecule_ted.csv                  # TED run instead of molecule_ped.csv
+  molecule_ted_full.csv             # TED only: full PED/KED/TED matrices with couplings
   molecule_IR_fundamentals.dat
   molecule_IR_anharmonic.dat       # if valid VPT2 is available
   molecule_IR_complete.dat         # if valid VPT2 is available
@@ -72,8 +73,8 @@ The PED/TED decomposition and Avogadro vectors describe **harmonic normal modes*
 - **Numerical VPT2 validation.** A normally terminated ORCA job containing `inf` or `nan` in the VPT2 fundamentals is classified as complete but invalid, and its anharmonic data are ignored.
 - **Avogadro CJSON.** One native CJSON file stores geometry, harmonic intensities, harmonic frequencies and all harmonic normal-mode vectors.
 - **Consistent Avogadro numbering.** Translational/rotational entries preceding the true vibrations are retained in the CJSON so that Avogadro mode numbers match the ORCA/PED mode numbers. For a nonlinear molecule, the first true vibration is normally displayed as mode 6.
-- **Manifest.** Each run records the script version, inputs, VPT2 state, IR broadening parameters and generated files.
-- **Selectable PED/TED.** PED remains the backward-compatible default; TED adds the kinetic-energy contribution through the Wilson G matrix. Topological assignments, generic families and primitive internal coordinates with phase remain available.
+- **Manifest.** Each run records the script version, inputs, VPT2 state, IR broadening parameters, and every generated file together with a brief description of its contents.
+- **Selectable PED/TED.** PED remains the backward-compatible default; TED adds the kinetic-energy contribution through the Wilson G matrix. The diagonal TED drives automatic assignments, while TED runs also export the full PED/KED/TED matrices with off-diagonal coupling terms.
 
 # 2. Ways to run ORCA PED Analyzer
 
@@ -309,6 +310,7 @@ propanamine_VPT2_analysis/
   propanamine_VPT2_summary.csv
   propanamine_VPT2_families.csv
   propanamine_VPT2_ped.csv          # default PED; becomes *_ted.csv for TED
+  propanamine_VPT2_ted_full.csv     # TED only: full PED/KED/TED matrices
   propanamine_VPT2_IR_fundamentals.dat
   propanamine_VPT2_IR_anharmonic.dat
   propanamine_VPT2_IR_complete.dat
@@ -329,7 +331,7 @@ python3 orca_ped_analyzer.py molecule.hess \
 
 A relative path is interpreted relative to the Hessian directory.
 
-The manifest records the script version, central Hessian, selected **PED/TED energy distribution**, selected VPT2 output, VPT2 status, IR FWHM and generated files. It is useful for reproducibility.
+The manifest records the script version, central Hessian, selected **PED/TED energy distribution**, selected VPT2 output, VPT2 status, IR FWHM, and every generated file. Each file entry includes a short description of its contents, so the manifest also acts as a compact guide to the analysis directory.
 
 # 6. VPT2 detection and validation
 
@@ -425,7 +427,27 @@ The factor of one half associated with averaging potential and kinetic contribut
 
 This implementation follows the **total energy distribution** concept introduced by E. Rytter and the corrected/modern formulation summarized by Oenen, Dinu and Liedl. The original 1974 definition has been discussed and refined in the later literature; the implementation therefore follows the modern formulation rather than reproducing the historical expression literally.
 
-**Important limitation:** the percentages above use the **diagonal approximation**. Off-diagonal coupling terms are omitted to provide positive, easily interpretable per-coordinate percentages. For internal coordinates this approximation is formally better justified for PED than for KED/TED; consequently TED should be interpreted as a useful coordinate-decomposition metric, not as an exact partition of all coupling terms.
+**Important limitation:** the percentages above use the **diagonal approximation**. Off-diagonal coupling terms are omitted to provide positive, easily interpretable per-coordinate percentages. For internal coordinates this approximation is formally better justified for PED than for KED/TED; consequently the diagonal TED should be interpreted as a useful coordinate-decomposition metric rather than as the complete coupling matrix.
+
+## 7.3 Full TED matrix export
+
+When **TED** is selected, ORCA PED Analyzer additionally evaluates the complete potential-, kinetic-, and total-energy distribution matrices for every harmonic mode:
+
+$$
+V_{mn}^{(k)} = \frac{D_{mk}F_{mn}D_{nk}}{\lambda_k},
+$$
+
+$$
+T_{mn}^{(k)} = D_{mk}(G^{-1})_{mn}D_{nk},
+$$
+
+$$
+E_{mn}^{(k)} = \frac{1}{2}\left[V_{mn}^{(k)}+T_{mn}^{(k)}\right].
+$$
+
+The displacement vector is normalized so that $D_k^T G^{-1}D_k=1$, while $\lambda_k=D_k^T F D_k$. Therefore each complete PED, KED and TED matrix sums to unity (100%). Unlike the diagonal assignment percentages, **off-diagonal coupling terms are retained and can be negative**. This is expected and contains information about coupling between internal coordinates.
+
+The advanced output `*_ted_full.csv` contains every matrix element for every harmonic mode, with separate potential, kinetic and total-energy contributions. The full matrix is intentionally not used for the automatic mode label: automatic assignment continues to use the positive normalized diagonal TED percentages because they provide a much more readable per-coordinate decomposition.
 
 Both PED and TED describe the mechanical/energetic character of a **harmonic zero-order normal mode**. Neither is an IR-intensity percentage, and both depend on the chosen internal-coordinate representation.
 
@@ -608,7 +630,8 @@ CSV output is enabled by default.
 | `*_summary.csv` | always | one row per mode: harmonic frequency, optional VPT2 fundamental, assignment, grouped PED/TED |
 | `*_families.csv` | always | topological/generic families and percentages |
 | `*_ped.csv` | PED selected (default) | primitive IC, PED percentage, phase, `D_value`, `F_diagonal` |
-| `*_ted.csv` | TED selected | primitive IC, TED percentage, phase, `D_value`, `F_diagonal`, `(G^-1)_diagonal`, and modal `lambda` |
+| `*_ted.csv` | TED selected | primitive IC, diagonal TED percentage used for assignment, phase, `D_value`, `F_diagonal`, `(G^-1)_diagonal`, and modal `lambda` |
+| `*_ted_full.csv` | TED selected | full mode-resolved PED/KED/TED matrices, including all off-diagonal coupling terms |
 | `*_vpt2_bands.csv` | valid VPT2 | overtone/combination data, intensity and assignment |
 | `*_fermi.txt` | Fermi block present | original ORCA Fermi-analysis block |
 
