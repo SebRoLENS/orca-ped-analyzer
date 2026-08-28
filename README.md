@@ -58,7 +58,7 @@ Typical GUI workflow:
 ## Main features
 
 - Selectable **PED** or **TED** analysis of ORCA harmonic normal modes; PED remains the backward-compatible default.
-- TED combines potential- and kinetic-energy contributions through the Wilson G matrix using a modern diagonal Rytter-type formulation.
+- TED uses the Wilson G matrix and the modern Rytter-type formulation. The diagonal TED is retained for automatic assignment, while TED runs also export the full PED/KED/TED matrices including off-diagonal coupling terms.
 - Automatic molecule-agnostic internal-coordinate representation.
 - Conservative topology-aware vibrational assignments.
 - Detection and reporting of mixed modes.
@@ -67,7 +67,8 @@ Typical GUI workflow:
 - Generation of broadened IR spectra.
 - Interactive graphical visualization of generated IR spectra.
 - Configurable IR FWHM from the GUI or command line.
-- CSV export of assignments and the selected PED/TED contributions.
+- CSV export of assignments and the selected diagonal PED/TED contributions; TED runs additionally export the full mode-resolved PED/KED/TED matrices.
+- A run manifest lists every generated file together with a brief description of its contents.
 - Avogadro CJSON export for visualization of harmonic normal modes.
 - Live GUI analysis log and the ability to stop a running analysis.
 
@@ -83,7 +84,7 @@ For a file named `molecule.hess`, the default output directory is:
 molecule_analysis/
 ```
 
-Depending on the selected method and available data, the analysis can produce PED or TED assignment tables, IR spectra, VPT2 band information, Fermi-resonance information, an Avogadro CJSON file, and a run manifest.
+Depending on the selected method and available data, the analysis can produce PED or TED assignment tables, a full TED matrix export for TED runs, IR spectra, VPT2 band information, Fermi-resonance information, an Avogadro CJSON file, and a run manifest. The manifest gives a short description of every output actually produced.
 
 ## Command-line use
 
@@ -130,7 +131,15 @@ python3 orca_ped_analyzer.py --help
 
 ORCA PED Analyzer can calculate either a **normalized diagonal internal-coordinate PED** or a **normalized diagonal total-energy distribution (TED)** for the harmonic normal modes. PED is the default and preserves the behaviour of previous versions. TED additionally includes the kinetic-energy contribution through the Wilson matrix \(G = B M^{-1} B^T\) and its inverse. The implemented TED uses the modern diagonal Rytter-type expression, with weights proportional to \([F_{ii}/\lambda_k + (G^{-1})_{ii}]D_{ik}^2\), followed by normalization to 100% for each mode.
 
-Both PED and TED describe the mechanical/energetic character of **harmonic zero-order modes**. They are not IR-intensity decompositions and their percentages depend on the selected internal-coordinate representation. The diagonal TED is an approximation because off-diagonal coupling terms are omitted; this limitation is discussed explicitly in the manual.
+Both PED and TED describe the mechanical/energetic character of **harmonic zero-order modes**. They are not IR-intensity decompositions and their percentages depend on the selected internal-coordinate representation. The diagonal TED used for automatic assignment is an approximation because off-diagonal coupling terms are omitted. When TED is selected, the software additionally exports `*_ted_full.csv`, containing the complete mode-resolved matrices
+
+\[
+V_{mn}^{(k)} = \frac{D_{mk}F_{mn}D_{nk}}{\lambda_k}, \qquad
+T_{mn}^{(k)} = D_{mk}(G^{-1})_{mn}D_{nk}, \qquad
+E_{mn}^{(k)} = \frac{1}{2}\left(V_{mn}^{(k)}+T_{mn}^{(k)}\right).
+\]
+
+This advanced export retains all off-diagonal coupling terms, which can legitimately be negative. The full matrices are kept separate from the positive diagonal percentages used by the automatic assignment engine.
 
 When valid VPT2/GVPT2 results are supplied, anharmonic frequencies and intensities are associated with the corresponding harmonic zero-order modes. The PED/TED decomposition and normal-mode vectors themselves remain harmonic.
 
