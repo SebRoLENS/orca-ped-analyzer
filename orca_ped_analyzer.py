@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-orca_ped_analyzer.py - molecule-agnostic PED normal-mode assignment for ORCA,
+orca_ped_analyzer.py - molecule-agnostic PED/TED normal-mode assignment for ORCA,
 with automatic optional VPT2/GVPT2 post-processing.
 
 Input:
@@ -15,14 +15,14 @@ The displaced basename_Dxxx.hess files are NEVER input to this script; ORCA
 uses them internally to build the anharmonic VPT2 result.
 
 Main outputs:
-  - harmonic normal-mode PED and molecule-agnostic/topological assignments
+  - selectable harmonic normal-mode PED or TED and molecule-agnostic/topological assignments
   - VPT2 fundamental frequencies when a completed VPT2 output is available
   - overtones and combination bands with ORCA anharmonic intensities
   - Fermi-resonance warning/raw block (optional)
   - three broadened positive-going IR spectra (.dat), when data permit:
     fundamentals; anharmonic-only (overtones+combinations); complete
     (VPT2 fundamentals + overtone/combination bands)
-  - CSV assignment/PED tables
+  - CSV assignment and PED/TED contribution tables
   - one native Avogadro CJSON containing all harmonic normal modes
 
 All generated files are placed in one BASENAME_analysis subdirectory next to
@@ -38,11 +38,13 @@ Examples:
   python3 orca_ped_analyzer.py molecule.hess --show-generic --show-raw --csv-prefix vib
 
 Method note:
-  The PED is a diagonal normalized internal-coordinate decomposition.  Its
-  percentages describe harmonic zero-order normal modes.  VPT2 frequencies and
-  anharmonic overtone/combination intensities are read from ORCA; the script
-  does not invent anharmonic state-mixing percentages when ORCA does not print
-  the corresponding eigenvector coefficients.
+  PED is the historical normalized diagonal potential-energy decomposition.
+  TED is an optional normalized diagonal total-energy decomposition that combines
+  potential and kinetic terms through the Wilson G matrix, following the modern
+  Rytter-type formulation. Both describe harmonic zero-order normal modes. VPT2
+  frequencies and anharmonic overtone/combination intensities are read from ORCA;
+  the script does not invent anharmonic state-mixing percentages when ORCA does
+  not print the corresponding eigenvector coefficients.
 """
 
 from __future__ import annotations
@@ -57,7 +59,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import numpy as np
 
-__version__ = "2.9.13"
+__version__ = "2.10.0"
 MANUAL_URL = "https://github.com/SebRoLENS/orca-ped-analyzer/blob/main/docs/ORCA_PED_Analyzer_Manual.md"
 GITHUB_URL = "https://github.com/SebRoLENS/orca-ped-analyzer"
 CONTACT_EMAIL = "romi@lens.unifi.it"
@@ -431,7 +433,7 @@ def write_avogadro_cjson(path, name, elems, xyz_bohr, bonds, freqs, modes, vib_m
     Numbering convention: Avogadro numbers imported CJSON vibration rows from 1,
     whereas the ORCA Hessian is indexed from 0.  We therefore export Hessian modes
     1..3N-1 (omitting only mode 0) so that all relevant vibrational mode numbers
-    displayed by Avogadro exactly match the Hessian/PED mode indices.
+    displayed by Avogadro exactly match the Hessian/analysis mode indices.
     """
     atomic_numbers=[]
     for e in elems:
@@ -507,7 +509,7 @@ def write_ir_dat(path,x,y,norm,metadata):
     path=Path(path)
     yn=y/norm if norm>0 else y.copy()
     with path.open('w') as fh:
-        fh.write("# ORCA PED/VPT2 relative absorbance spectrum\n")
+        fh.write("# ORCA PED Analyzer/VPT2 relative absorbance spectrum\n")
         fh.write("# Positive-going absorbance; wavenumbers increase left-to-right.\n")
         fh.write("# Relative absorbance is normalized with the same factor for all spectra from this run.\n")
         for line in metadata:
@@ -894,12 +896,115 @@ def select_nonredundant(candidates, Bcand, target_rank, tol=1e-8):
     return chosen
 
 def reconstruct_modes(H,masses):
-    invsqrt=np.repeat(1/np.sqrt(masses),3)
-    Hmw=(invsqrt[:,None]*H)*invsqrt[None,:]
-    lam,L=np.linalg.eigh(Hmw)
-    modes=invsqrt[:,None]*L
-    freqs=np.sign(lam)*np.sqrt(np.abs(lam))*FREQ_FACTOR
-    return freqs,modes
+              invsqrt=np.repeat(1/np.sqrt(masses),3)
+              Hmw=(invsqrt[:,None]*H)*invsqrt[None,:]
+              lam,L=np.linalg.eigh(Hmw)
+              modes=invsqrt[:,None]*L
+              freqs=np.sign(lam)*np.sqrt(np.abs(lam))*FREQ_FACTOR
+              return freqs,modes
+
+
+def compute_energy_distribution(B, F, D, masses, method="ped"):
+    """Return normalized diagonal PED or TED percentages for each normal mode.
+
+    Parameters
+    ----------
+    B : ndarray, shape (S, 3N)
+        Wilson B matrix for the selected non-redundant internal coordinates.
+    F : ndarray, shape (S, S)
+        Internal-coordinate force-constant matrix.
+    D : ndarray, shape (S, M)
+        Internal-coordinate normal-mode displacements, D = B L.
+    masses : ndarray, shape (N,)
+        Atomic masses in amu.
+    method : {"ped", "ted"}
+        ``ped`` reproduces the historical diagonal normalized potential-energy
+        distribution. ``ted`` uses the corrected/modern diagonal Rytter-type
+        total-energy distribution, combining potential and kinetic terms.
+
+    Notes
+    -----
+    For TED, G = B M^-1 B^T and the kinetic term uses G^-1.  Each displacement
+    column is first normalized with D^T G^-1 D = 1, so the result is invariant
+    to arbitrary normal-mode eigenvector scaling.  The modal eigenvalue is then
+    lambda = D^T F D.  The normalized diagonal TED weights are proportional to
+
+        [F_ii/lambda + (G^-1)_ii] D_i^2.
+
+    This is the diagonal approximation commonly used to obtain positive,
+    readily interpretable percentages.  It neglects off-diagonal coupling
+    terms; the manual documents this limitation explicitly.
+    """
+    method=str(method).strip().lower()
+    if method not in {"ped", "ted"}:
+        raise ValueError("Energy distribution must be 'ped' or 'ted'.")
+
+    B=np.asarray(B,dtype=float)
+    F=np.asarray(F,dtype=float)
+    D=np.asarray(D,dtype=float)
+    masses=np.asarray(masses,dtype=float)
+    if B.ndim != 2 or F.shape != (B.shape[0],B.shape[0]) or D.shape[0] != B.shape[0]:
+        raise ValueError("Incompatible B, F, and D dimensions for energy distribution analysis.")
+    if B.shape[1] != 3*len(masses) or np.any(~np.isfinite(masses)) or np.any(masses <= 0):
+        raise ValueError("Invalid atomic masses or B-matrix dimensions for energy distribution analysis.")
+
+    fdiag=np.diag(F).astype(float)
+    if np.any(~np.isfinite(fdiag)):
+        raise ValueError("Non-finite diagonal internal force constants found.")
+    if np.any(fdiag < -1e-8):
+        raise ValueError("Negative diagonal internal force constants found.")
+    fdiag=np.maximum(fdiag,0.0)
+
+    if method == "ped":
+        raw=fdiag[:,None]*D**2
+        denom=raw.sum(axis=0)
+        if np.any(~np.isfinite(denom)) or np.any(denom <= 0):
+            raise ValueError("PED normalization failed for one or more modes.")
+        return 100.0*raw/denom[None,:], {
+            "F_diagonal":fdiag,
+            "G_inverse_diagonal":None,
+            "mode_lambda":None,
+        }
+
+    inv_mass_cart=np.repeat(1.0/masses,3)
+    G=(B*inv_mass_cart[None,:])@B.T
+    G=(G+G.T)/2.0
+    if np.any(~np.isfinite(G)):
+        raise ValueError("Non-finite Wilson G matrix encountered during TED analysis.")
+    try:
+        Ginv=np.linalg.inv(G)
+    except np.linalg.LinAlgError as exc:
+        raise ValueError(
+            "TED analysis requires an invertible Wilson G matrix; the selected internal-coordinate set is singular."
+        ) from exc
+    Ginv=(Ginv+Ginv.T)/2.0
+    gdiag=np.diag(Ginv).astype(float)
+    gtol=max(float(np.max(np.abs(gdiag))),1.0)*1e-10
+    if np.any(~np.isfinite(gdiag)) or np.any(gdiag < -gtol):
+        raise ValueError("Invalid diagonal elements in the inverse Wilson G matrix during TED analysis.")
+    gdiag=np.maximum(gdiag,0.0)
+
+    kinetic_norm=np.einsum("ik,ij,jk->k",D,Ginv,D)
+    if np.any(~np.isfinite(kinetic_norm)) or np.any(kinetic_norm <= 0):
+        raise ValueError("TED kinetic normalization failed for one or more modes.")
+    Dunit=D/np.sqrt(kinetic_norm)[None,:]
+
+    mode_lambda=np.einsum("ik,ij,jk->k",Dunit,F,Dunit)
+    if np.any(~np.isfinite(mode_lambda)) or np.any(mode_lambda <= 0):
+        raise ValueError(
+            "TED requires positive harmonic mode force constants. Check for imaginary modes or an unsuitable internal-coordinate set."
+        )
+
+    raw=(fdiag[:,None]/mode_lambda[None,:] + gdiag[:,None])*(Dunit**2)
+    denom=raw.sum(axis=0)
+    if np.any(~np.isfinite(denom)) or np.any(denom <= 0):
+        raise ValueError("TED normalization failed for one or more modes.")
+    return 100.0*raw/denom[None,:], {
+        "F_diagonal":fdiag,
+        "G_inverse_diagonal":gdiag,
+        "mode_lambda":mode_lambda,
+    }
+
 
 def atom_name(elems,i):
     return f"{elems[i]}{i+1}"
@@ -1122,7 +1227,7 @@ def grouped_assignment(groups, pct_col, D_col, mixed_second=20.0, pure_threshold
 
 def main():
     ap=argparse.ArgumentParser(
-        description="Automatic molecule-agnostic PED assignment from an ORCA .hess file, with optional VPT2 integration",
+        description="Automatic molecule-agnostic PED/TED assignment from an ORCA .hess file, with optional VPT2 integration",
         epilog=(
             f"Contact: {CONTACT_EMAIL}\n"
             f"Manual: {MANUAL_URL}\n"
@@ -1153,6 +1258,8 @@ def main():
                     help="angles >= this value are treated as linear bends (default 175)")
     ap.add_argument("--min-freq",type=float,default=20.0,
                     help="ignore modes with |frequency| below this cm^-1 (default 20)")
+    ap.add_argument("--energy-distribution","--distribution",choices=("ped","ted"),default="ped",
+                    help="harmonic internal-coordinate decomposition: ped (default) or ted (Rytter-type total energy distribution)")
     ap.add_argument("--top",type=int,default=5,help="number of top primitive IC contributions to print")
     ap.add_argument("--min-percent",type=float,default=1.0,
                     help="do not print primitive-IC contributions below this percent")
@@ -1175,7 +1282,7 @@ def main():
     ap.add_argument("--csv-prefix",default=None,
                     help="basename for CSV tables inside the output directory (default: Hessian basename)")
     ap.add_argument("--no-csv",action="store_true",
-                    help="do not write CSV assignment/PED tables")
+                    help="do not write CSV assignment/PED/TED tables")
     ap.add_argument("--no-avogadro-cjson",action="store_true",
                     help="do not write the Avogadro CJSON file containing all harmonic normal modes")
     ap.add_argument("--cjson-name",default=None,
@@ -1193,6 +1300,8 @@ def main():
     ap.add_argument("--ir-step",type=float,default=1.0,
                     help="IR grid spacing in cm^-1 (default 1)")
     args=ap.parse_args()
+    distribution_key=args.energy_distribution.lower()
+    distribution_label=distribution_key.upper()
 
     print(f"# Contact: {CONTACT_EMAIL}")
     print(f"# Manual: {MANUAL_URL}")
@@ -1283,12 +1392,13 @@ def main():
             + ", ".join(ic_label(ics[i],elems) for i in bad[:10])
             + ". The structure may not be a minimum or the IC set is unsuitable."
         )
-    fdiag=np.maximum(fdiag,0.0)
-    raw=fdiag[:,None]*D**2
-    denom=raw.sum(axis=0)
-    if np.any(denom<=0):
-        raise SystemExit("PED normalization failed for one or more modes.")
-    pct=100*raw/denom[None,:]
+    try:
+        pct,distribution_diag=compute_energy_distribution(B,F,D,masses,distribution_key)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    fdiag=distribution_diag["F_diagonal"]
+    ginvdiag=distribution_diag["G_inverse_diagonal"]
+    mode_lambda=distribution_diag["mode_lambda"]
 
     # --- VPT2 auto-detection / validation ---
     vpt2=None
@@ -1318,16 +1428,17 @@ def main():
     print(f"# Molecule: {n} atoms | {'linear' if linear else 'non-linear'}")
     print(f"# Bonds inferred: {len(bonds)} | candidate ICs: {len(candidates)} | selected ICs: {len(ics)}")
     print(f"# Cartesian-Hessian reconstruction relative error: {relerr:.3e}")
+    print(f"# Energy distribution: {distribution_label} (PED is the backward-compatible default; TED includes kinetic-energy terms)")
     if relerr>1e-3:
         print("# WARNING: reconstruction error is relatively high; inspect geometry/connectivity.",file=sys.stderr)
     print(f"# Ring/cycle bonds detected: {len(ring_edges)} | ring atoms: {len(ring_atoms)} | ring systems: {len(ring_systems)}")
 
     if vpt2_path is None:
-        print("# VPT2: no matching .out file supplied/found -> harmonic/PED analysis only")
+        print(f"# VPT2: no matching .out file supplied/found -> harmonic/{distribution_label} analysis only")
     elif vpt2 is None:
-        print(f"# VPT2: output unavailable ({vpt2_path}) -> harmonic/PED analysis only")
+        print(f"# VPT2: output unavailable ({vpt2_path}) -> harmonic/{distribution_label} analysis only")
     elif vpt2["status"]=="not-detected":
-        print(f"# VPT2: no VPT2 analysis detected in {vpt2_path.name} -> harmonic/PED analysis only")
+        print(f"# VPT2: no VPT2 analysis detected in {vpt2_path.name} -> harmonic/{distribution_label} analysis only")
     elif vpt2["status"]=="incomplete":
         exp=vpt2.get("expected_fundamentals")
         got=vpt2.get("raw_fundamental_count",0)
@@ -1362,7 +1473,7 @@ def main():
         ic,elems,ring_edges,ring_atoms,atom_to_system,adj)
     gen_func=lambda ic: generic_family_key_and_label(ic,elems)
 
-    print(f"{'Mode':>5} {'Harm/cm-1':>11} {'VPT2/cm-1':>11} {'Harm.Int/km mol-1':>18}  {'Assignment':<62} Grouped PED")
+    print(f"{'Mode':>5} {'Harm/cm-1':>11} {'VPT2/cm-1':>11} {'Harm.Int/km mol-1':>18}  {'Assignment':<62} Grouped {distribution_label}")
     print("-"*192)
     summaries=[]; detailed=[]; family_rows=[]; mode_assignments={}; mode_groups={}
 
@@ -1409,10 +1520,13 @@ def main():
                 continue
             phase="+" if D[r,col]>=0 else "-"
             rawpieces.append(f"{ic_label(ics[r],elems)} {pct[r,col]:.2f}%[{phase}]")
-            detailed.append([int(mi),float(freqs[mi]),vfreq,
-                             harmonic_intensity_map.get(int(mi),""),
-                             ass,ic_label(ics[r],elems),
-                             ics[r].kind,float(pct[r,col]),phase,float(D[r,col]),float(fdiag[r])])
+            detail_row=[int(mi),float(freqs[mi]),vfreq,
+                        harmonic_intensity_map.get(int(mi),""),
+                        ass,ic_label(ics[r],elems),
+                        ics[r].kind,float(pct[r,col]),phase,float(D[r,col]),float(fdiag[r])]
+            if distribution_key == "ted":
+                detail_row.extend([float(ginvdiag[r]),float(mode_lambda[col])])
+            detailed.append(detail_row)
             rawkeep+=1
             if rawkeep>=args.top:
                 break
@@ -1455,7 +1569,7 @@ def main():
 
     if vpt2 and vpt2.get("valid") and vpt2["fermi_block"]:
         print("\n# Fermi-resonance analysis: present in ORCA VPT2 output.")
-        print("# Important: PED percentages above describe harmonic zero-order normal modes;")
+        print(f"# Important: {distribution_label} percentages above describe harmonic zero-order normal modes;")
         print("# strongly resonant anharmonic states can mix and should not be interpreted as pure fundamentals.")
         if args.show_fermi:
             print("\n"+vpt2["fermi_block"].strip())
@@ -1490,7 +1604,7 @@ def main():
             print(f"\n# Avogadro vibrations CJSON written: {cjson_path}")
             print("#   Open this single file in Avogadro, then use Analyze -> Vibrational Modes.")
             print("#   The displayed/animated vectors and frequencies are harmonic normal modes.")
-            print("#   Avogadro numbering is aligned to Hessian/PED indices: mode 6 in Avogadro = mode 6 in the table.")
+            print("#   Avogadro numbering is aligned to Hessian/analysis indices: mode 6 in Avogadro = mode 6 in the table.")
             print("#   Low-numbered rows before the vibrational manifold are translation/rotation modes included only for numbering alignment.")
         except Exception as exc:
             print(f"\n# Avogadro CJSON not written: {exc}",file=sys.stderr)
@@ -1504,7 +1618,7 @@ def main():
         p=output_dir/csvbase
         sfile=str(p)+"_summary.csv"
         ffile=str(p)+"_families.csv"
-        dfile=str(p)+"_ped.csv"
+        dfile=str(p)+f"_{distribution_key}.csv"
         with open(sfile,"w",newline="") as fh:
             w=csv.writer(fh)
             w.writerow(["hess_mode","vpt2_mode",
@@ -1522,9 +1636,12 @@ def main():
             w.writerows(family_rows)
         with open(dfile,"w",newline="") as fh:
             w=csv.writer(fh)
-            w.writerow(["mode","harmonic_frequency_cm-1","vpt2_fundamental_cm-1",
-                        "harmonic_intensity_km_mol","assignment",
-                        "internal_coordinate","type","percent","phase","D_value","F_diagonal"])
+            detail_header=["mode","harmonic_frequency_cm-1","vpt2_fundamental_cm-1",
+                           "harmonic_intensity_km_mol","assignment",
+                           "internal_coordinate","type","percent","phase","D_value","F_diagonal"]
+            if distribution_key == "ted":
+                detail_header.extend(["G_inverse_diagonal","mode_lambda"])
+            w.writerow(detail_header)
             w.writerows(detailed)
         generated_files.extend([str(Path(sfile).resolve()),str(Path(ffile).resolve()),str(Path(dfile).resolve())])
         print(f"\nWrote: {sfile}")
@@ -1590,6 +1707,7 @@ def main():
         f"central_hessian: {hess_path}",
         f"vpt2_output: {vpt2_path if vpt2_path is not None else 'none'}",
         f"vpt2_status: {vpt2.get('status') if vpt2 else 'not-used'}",
+        f"energy_distribution: {distribution_label}",
         f"ir_fwhm_cm-1: {args.ir_fwhm}",
         f"output_directory: {output_dir}",
         "",

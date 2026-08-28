@@ -6,7 +6,7 @@ orca_ped_analyzer.main() analysis engine in a separate process.  Keeping the
 analysis outside the GUI process makes the interface responsive and allows a
 running analysis to be stopped safely from the launcher.
 
-The scientific PED/VPT2 implementation remains in orca_ped_analyzer.py.
+The scientific PED/TED/VPT2 implementation remains in orca_ped_analyzer.py.
 """
 
 from __future__ import annotations
@@ -287,6 +287,7 @@ class AnalyzerGUI:
         self.vpt2_var = tk.StringVar()
         self.output_var = tk.StringVar()
         self.fwhm_var = tk.StringVar(value="10")
+        self.energy_var = tk.StringVar(value="PED")
         self.auto_vpt2_var = tk.BooleanVar(value=True)
         self.generic_var = tk.BooleanVar(value=False)
         self.raw_var = tk.BooleanVar(value=False)
@@ -335,7 +336,7 @@ class AnalyzerGUI:
         ttk.Label(
             outer,
             text=(
-                "Normalized diagonal internal-coordinate PED with optional ORCA "
+                "Selectable normalized diagonal internal-coordinate PED or TED with optional ORCA "
                 "VPT2/GVPT2 integration. The GUI uses the same analysis engine as "
                 "the command-line program.\n"
                 f"Contact: {CONTACT_EMAIL}"
@@ -377,27 +378,39 @@ class AnalyzerGUI:
         options = ttk.LabelFrame(outer, text="Options", padding=10)
         options.grid(row=5, column=0, columnspan=3, sticky="ew", pady=(10, 8))
 
+        ttk.Label(options, text="Energy distribution:").grid(
+            row=0, column=0, sticky="w", padx=(0, 5)
+        )
+        self.energy_combo = ttk.Combobox(
+            options,
+            textvariable=self.energy_var,
+            values=("PED", "TED"),
+            state="readonly",
+            width=7,
+        )
+        self.energy_combo.grid(row=0, column=1, sticky="w", padx=(0, 18))
+        ttk.Label(options, text="IR FWHM (cm⁻¹):").grid(
+            row=0, column=2, sticky="e", padx=(8, 5)
+        )
+        ttk.Entry(options, textvariable=self.fwhm_var, width=7).grid(
+            row=0, column=3, sticky="w"
+        )
+
         ttk.Checkbutton(
             options,
             text="Auto-detect matching .out",
             variable=self.auto_vpt2_var,
-        ).grid(row=0, column=0, sticky="w", padx=(0, 14))
+        ).grid(row=1, column=0, sticky="w", padx=(0, 14), pady=(8, 0))
         ttk.Checkbutton(
             options,
             text="Show generic groups",
             variable=self.generic_var,
-        ).grid(row=0, column=1, sticky="w", padx=(0, 14))
+        ).grid(row=1, column=1, sticky="w", padx=(0, 14), pady=(8, 0))
         ttk.Checkbutton(
             options,
             text="Show raw ICs",
             variable=self.raw_var,
-        ).grid(row=0, column=2, sticky="w", padx=(0, 14))
-        ttk.Label(options, text="IR FWHM (cm⁻¹):").grid(
-            row=0, column=3, sticky="e", padx=(8, 5)
-        )
-        ttk.Entry(options, textvariable=self.fwhm_var, width=7).grid(
-            row=0, column=4, sticky="w"
-        )
+        ).grid(row=1, column=2, sticky="w", padx=(0, 14), pady=(8, 0))
 
         buttons = ttk.Frame(outer)
         buttons.grid(row=6, column=0, columnspan=3, sticky="ew", pady=(4, 8))
@@ -507,7 +520,7 @@ class AnalyzerGUI:
             )
             return
 
-        argv = [str(hess.resolve()), "--ir-fwhm", str(fwhm)]
+        argv = [str(hess.resolve()), "--ir-fwhm", str(fwhm), "--energy-distribution", self.energy_var.get().lower()]
 
         vpt2_text = self.vpt2_var.get().strip()
         if vpt2_text:
@@ -547,7 +560,8 @@ class AnalyzerGUI:
         self.log.insert(
             "end",
             f"ORCA PED Analyzer {core.__version__}\n"
-            f"Input: {hess.resolve()}\n\n",
+            f"Input: {hess.resolve()}\n"
+            f"Energy distribution: {self.energy_var.get()}\n\n",
         )
         self.log.see("end")
 

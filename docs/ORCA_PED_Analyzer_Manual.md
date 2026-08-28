@@ -2,7 +2,7 @@
 title: "ORCA PED Analyzer"
 subtitle: "User and Method Manual"
 author: "Sebastiano Romi"
-date: "Version 2.9.13"
+date: "Version 2.10.0"
 geometry: margin=22mm
 fontsize: 10pt
 header-includes:
@@ -19,7 +19,7 @@ header-includes:
 
 # Purpose
 
-**ORCA PED Analyzer** performs a molecule-agnostic analysis of ORCA normal modes using a normalized diagonal potential-energy distribution (PED) in internal coordinates. It adds hierarchical/topological assignments, optional VPT2/GVPT2 post-processing, broadened IR spectra, CSV exports, and an Avogadro CJSON file containing all harmonic normal modes.
+**ORCA PED Analyzer** performs a molecule-agnostic analysis of ORCA normal modes using a selectable normalized diagonal potential-energy distribution (**PED**) or total-energy distribution (**TED**) in internal coordinates. It adds hierarchical/topological assignments, optional VPT2/GVPT2 post-processing, broadened IR spectra, CSV exports, and an Avogadro CJSON file containing all harmonic normal modes.
 
 The program is designed around a conservative principle: **assignments are derived from the calculated atomic motion and the internal-coordinate energy decomposition, not from empirical frequency windows.**
 
@@ -48,7 +48,8 @@ By default, the script creates:
 molecule_analysis/
   molecule_summary.csv
   molecule_families.csv
-  molecule_ped.csv
+  molecule_ped.csv                  # default PED run
+  molecule_ted.csv                  # TED run instead of molecule_ped.csv
   molecule_IR_fundamentals.dat
   molecule_IR_anharmonic.dat       # if valid VPT2 is available
   molecule_IR_complete.dat         # if valid VPT2 is available
@@ -58,9 +59,9 @@ molecule_analysis/
   molecule_manifest.txt
 ```
 
-The PED and Avogadro vectors describe **harmonic normal modes**. When a valid VPT2 calculation is available, VPT2 fundamental frequencies are used in the relevant tables and spectra, while overtone and combination bands are read directly from the ORCA VPT2 output.
+The PED/TED decomposition and Avogadro vectors describe **harmonic normal modes**. When a valid VPT2 calculation is available, VPT2 fundamental frequencies are used in the relevant tables and spectra, while overtone and combination bands are read directly from the ORCA VPT2 output.
 
-# 1. Main features of version 2.9.13
+# 1. Main features of version 2.10.0
 
 - **Desktop applications.** Pre-built Linux AppImage, Windows executable and macOS DMG packages provide a graphical interface without requiring a local Python installation.
 - **Interactive desktop workflow.** The GUI provides automatic VPT2 detection, configurable IR FWHM, generic/raw assignment controls, a live analysis log and the ability to stop a running analysis.
@@ -72,7 +73,7 @@ The PED and Avogadro vectors describe **harmonic normal modes**. When a valid VP
 - **Avogadro CJSON.** One native CJSON file stores geometry, harmonic intensities, harmonic frequencies and all harmonic normal-mode vectors.
 - **Consistent Avogadro numbering.** Translational/rotational entries preceding the true vibrations are retained in the CJSON so that Avogadro mode numbers match the ORCA/PED mode numbers. For a nonlinear molecule, the first true vibration is normally displayed as mode 6.
 - **Manifest.** Each run records the script version, inputs, VPT2 state, IR broadening parameters and generated files.
-- **Molecule-agnostic PED.** Topological assignments, generic families and primitive internal coordinates with phase remain available.
+- **Selectable PED/TED.** PED remains the backward-compatible default; TED adds the kinetic-energy contribution through the Wilson G matrix. Topological assignments, generic families and primitive internal coordinates with phase remain available.
 
 # 2. Ways to run ORCA PED Analyzer
 
@@ -136,11 +137,12 @@ The graphical launcher runs the same scientific analysis engine as the command-l
 1. **Central Hessian (`.hess`).** Select the central ORCA Hessian. Displaced VPT2 Hessians such as `molecule_D001.hess` must not be used as the main input.
 2. **VPT2/GVPT2 output (`.out`).** This is optional. A completed output can be selected explicitly, or **Auto-detect matching `.out`** can be left enabled so that the analyzer searches for the corresponding output automatically.
 3. **Output directory.** Leave this empty to use the default `BASENAME_analysis/` directory, or select another location.
-4. **Show generic groups.** Enables the same generic element/type assignment families provided by the command-line `--show-generic` option.
-5. **Show raw ICs.** Includes primitive internal-coordinate contributions and phase information, corresponding to `--show-raw`.
-6. **IR FWHM.** Sets the Gaussian broadening width used for generated IR spectra. The default is 10 cm^-1.
-7. **Run analysis.** Starts the calculation in a separate process so that the graphical interface remains responsive.
-8. **Stop analysis.** Terminates a running analysis. Partial output files may remain if the run is stopped before completion.
+4. **Energy distribution.** Select **PED** (default) or **TED**. PED preserves the behaviour of previous versions; TED combines potential and kinetic contributions using the Wilson G matrix.
+5. **Show generic groups.** Enables the same generic element/type assignment families provided by the command-line `--show-generic` option.
+6. **Show raw ICs.** Includes primitive internal-coordinate contributions and phase information, corresponding to `--show-raw`.
+7. **IR FWHM.** Sets the Gaussian broadening width used for generated IR spectra. The default is 10 cm^-1.
+8. **Run analysis.** Starts the calculation in a separate process so that the graphical interface remains responsive.
+9. **Stop analysis.** Terminates a running analysis. Partial output files may remain if the run is stopped before completion.
 
 ### Live analysis log
 
@@ -158,7 +160,7 @@ The plotted data are exactly the same `.dat` files written by the analysis engin
 
 The top of the GUI contains direct links to the user manual and the GitHub repository/release page. The author contact address is also shown in the graphical interface. If the operating system cannot open a link automatically, the application displays the explicit URL so that it can be copied into a browser.
 
-The generated PED tables, assignments, spectra, VPT2 information and Avogadro CJSON files are the same scientific outputs produced by the corresponding command-line analysis.
+The generated PED/TED tables, assignments, spectra, VPT2 information and Avogadro CJSON files are the same scientific outputs produced by the corresponding command-line analysis.
 
 ## 2.3 Security warnings and unsigned builds
 
@@ -206,7 +208,7 @@ python3 orca_ped_analyzer.py --help
 Expected public version:
 
 ```text
-orca_ped_analyzer.py 2.9.13
+orca_ped_analyzer.py 2.10.0
 ```
 
 # 3. Which Hessian should be used?
@@ -262,13 +264,27 @@ python3 orca_ped_analyzer.py molecule.hess \
     --vpt2-out molecule_restart.out
 ```
 
-## 4.3 Disable automatic VPT2 detection
+## 4.3 Select TED instead of PED
+
+PED is the default for backward compatibility. To use total-energy distribution analysis:
+
+```bash
+python3 orca_ped_analyzer.py molecule.hess --energy-distribution ted
+```
+
+The shorter alias is equivalent:
+
+```bash
+python3 orca_ped_analyzer.py molecule.hess --distribution ted
+```
+
+## 4.4 Disable automatic VPT2 detection
 
 ```bash
 python3 orca_ped_analyzer.py molecule.hess --no-auto-vpt2
 ```
 
-## 4.4 Recommended detailed run
+## 4.5 Recommended detailed run
 
 ```bash
 python3 orca_ped_analyzer.py molecule.hess \
@@ -292,7 +308,7 @@ For `propanamine_VPT2.hess`, for example:
 propanamine_VPT2_analysis/
   propanamine_VPT2_summary.csv
   propanamine_VPT2_families.csv
-  propanamine_VPT2_ped.csv
+  propanamine_VPT2_ped.csv          # default PED; becomes *_ted.csv for TED
   propanamine_VPT2_IR_fundamentals.dat
   propanamine_VPT2_IR_anharmonic.dat
   propanamine_VPT2_IR_complete.dat
@@ -313,7 +329,7 @@ python3 orca_ped_analyzer.py molecule.hess \
 
 A relative path is interpreted relative to the Hessian directory.
 
-The manifest records the script version, central Hessian, selected VPT2 output, VPT2 status, IR FWHM and generated files. It is useful for reproducibility.
+The manifest records the script version, central Hessian, selected **PED/TED energy distribution**, selected VPT2 output, VPT2 status, IR FWHM and generated files. It is useful for reproducibility.
 
 # 6. VPT2 detection and validation
 
@@ -321,7 +337,7 @@ The program distinguishes **program termination** from **numerical validity**. A
 
 | State | Typical message | Analyzer behavior |
 |---|---|---|
-| Not available | no matching `.out` / no VPT2 section | PED + harmonic fundamentals |
+| Not available | no matching `.out` / no VPT2 section | PED/TED + harmonic fundamentals |
 | Incomplete/running | `INCOMPLETE/RUNNING` | partial VPT2 data ignored |
 | Complete but invalid | `COMPLETE BUT NUMERICALLY INVALID` | `inf`/`nan` ignored; harmonic data retained |
 | Complete and valid | `COMPLETE + VALID` | VPT2 fundamentals, overtone/combination bands and Fermi information integrated |
@@ -335,7 +351,7 @@ Example diagnostic:
 # fundamental rows=30/30; non-finite fundamentals=30; ...
 ```
 
-The harmonic PED and CJSON remain usable. The fundamentals spectrum is produced using harmonic frequencies, while the anharmonic-only and complete spectra are not generated.
+The harmonic PED/TED analysis and CJSON remain usable. The fundamentals spectrum is produced using harmonic frequencies, while the anharmonic-only and complete spectra are not generated.
 
 ## 6.2 Mapping VPT2 fundamentals to Hessian modes
 
@@ -349,31 +365,69 @@ Default tolerance:
 
 that is, 10 cm^-1. If mapping fails, first verify that the `.hess` and `.out` belong to the same calculation.
 
-# 7. How the PED is calculated
+# 7. How PED and TED are calculated
 
 The analyzer creates primitive internal coordinates, numerically constructs the Wilson `B` matrix and selects an independent set spanning the vibrational space: `3N-6` coordinates for a nonlinear molecule or `3N-5` for a linear molecule.
 
-For harmonic normal-mode vector \(l\), the internal-coordinate displacement is
+For harmonic normal-mode vector \(l_k\), the internal-coordinate displacement is
 
 $$
-D = B l
+D_k = B l_k.
 $$
 
 The selected internal-coordinate force-constant representation is
 
 $$
-F = (B^+)^T H B^+
+F = (B^+)^T H B^+,
 $$
 
 where \(B^+\) is the pseudoinverse of `B` and `H` is the Cartesian Hessian.
 
-The implemented PED is a normalized diagonal decomposition:
+## 7.1 Potential-energy distribution (PED)
+
+PED is the default and is identical to the decomposition used in earlier ORCA PED Analyzer versions:
 
 $$
-PED_i = 100\,\frac{F_{ii}D_i^2}{\sum_j F_{jj}D_j^2}.
+PED_i^{(k)} = 100\,\frac{F_{ii}D_{ik}^2}{\sum_j F_{jj}D_{jk}^2}.
 $$
 
-**Important:** the PED describes the mechanical/energetic character of a harmonic normal mode. It is not an IR-intensity percentage and it depends on the chosen internal-coordinate representation.
+It is a normalized diagonal potential-energy decomposition. Because the common modal factor cancels during normalization, this form is equivalent to using the diagonal potential contribution divided by the modal eigenvalue.
+
+## 7.2 Total-energy distribution (TED)
+
+TED additionally includes the kinetic-energy contribution. The Wilson kinetic matrix is
+
+$$
+G = B M^{-1} B^T,
+$$
+
+where `M` is the diagonal Cartesian mass matrix. The code uses \(G^{-1}\) and first normalizes every displacement column so that
+
+$$
+D_k^T G^{-1} D_k = 1.
+$$
+
+The corresponding modal force-constant eigenvalue is then obtained as
+
+$$
+\lambda_k = D_k^T F D_k.
+$$
+
+The implemented normalized diagonal TED is
+
+$$
+TED_i^{(k)} = 100\,
+\frac{\left[F_{ii}/\lambda_k + (G^{-1})_{ii}\right]D_{ik}^2}
+{\sum_j \left[F_{jj}/\lambda_k + (G^{-1})_{jj}\right]D_{jk}^2}.
+$$
+
+The factor of one half associated with averaging potential and kinetic contributions cancels in the normalization. The kinetic normalization also makes the result invariant to arbitrary scaling of a normal-mode eigenvector.
+
+This implementation follows the **total energy distribution** concept introduced by E. Rytter and the corrected/modern formulation summarized by Oenen, Dinu and Liedl. The original 1974 definition has been discussed and refined in the later literature; the implementation therefore follows the modern formulation rather than reproducing the historical expression literally.
+
+**Important limitation:** the percentages above use the **diagonal approximation**. Off-diagonal coupling terms are omitted to provide positive, easily interpretable per-coordinate percentages. For internal coordinates this approximation is formally better justified for PED than for KED/TED; consequently TED should be interpreted as a useful coordinate-decomposition metric, not as an exact partition of all coupling terms.
+
+Both PED and TED describe the mechanical/energetic character of a **harmonic zero-order normal mode**. Neither is an IR-intensity percentage, and both depend on the chosen internal-coordinate representation.
 
 # 8. Three assignment levels
 
@@ -414,7 +468,7 @@ nu(C5-C6) 20.84%[+]
 
 # 9. Pure, mixed and phase-qualified modes
 
-The assignment does not simply choose the largest individual primitive coordinate. Primitive contributions are first grouped by family; then the program evaluates whether one family dominates or whether the mode should be described as mixed.
+The assignment does not simply choose the largest individual primitive coordinate. Primitive contributions from the selected PED or TED are first grouped by family; then the program evaluates whether one family dominates or whether the mode should be described as mixed.
 
 Main defaults:
 
@@ -455,7 +509,7 @@ VPT2 corrects state energies and transition frequencies but does not provide the
 
 ## 10.2 Why does Avogadro start the first real vibration at mode 6?
 
-Avogadro numbers vibration entries sequentially. Version 2.9.13 keeps the preceding translational/rotational entries in the CJSON so that the number displayed by Avogadro matches the ORCA/PED Hessian mode number. For a typical nonlinear molecule:
+Avogadro numbers vibration entries sequentially. Version 2.10.0 keeps the preceding translational/rotational entries in the CJSON so that the number displayed by Avogadro matches the ORCA/PED Hessian mode number. For a typical nonlinear molecule:
 
 ```text
 Avogadro mode 1-5  -> translational/rotational near-zero entries
@@ -543,7 +597,7 @@ If ORCA prints a Fermi-resonance analysis block, the script records its presence
 
 it is also printed to the terminal and stored in `*_fermi.txt` when file output is enabled.
 
-**Interpretation:** PED and Avogadro animations describe harmonic zero-order modes. A strongly resonant observed state may be a mixture of zero-order states and should not be treated as a pure fundamental solely from its PED label.
+**Interpretation:** PED/TED and Avogadro animations describe harmonic zero-order modes. A strongly resonant observed state may be a mixture of zero-order states and should not be treated as a pure fundamental solely from its PED label.
 
 # 14. CSV tables
 
@@ -551,9 +605,10 @@ CSV output is enabled by default.
 
 | File | When | Content |
 |---|---|---|
-| `*_summary.csv` | always | one row per mode: harmonic frequency, optional VPT2 fundamental, assignment, grouped PED |
+| `*_summary.csv` | always | one row per mode: harmonic frequency, optional VPT2 fundamental, assignment, grouped PED/TED |
 | `*_families.csv` | always | topological/generic families and percentages |
-| `*_ped.csv` | always | primitive IC, percentage, phase, `D_value`, `F_diagonal` |
+| `*_ped.csv` | PED selected (default) | primitive IC, PED percentage, phase, `D_value`, `F_diagonal` |
+| `*_ted.csv` | TED selected | primitive IC, TED percentage, phase, `D_value`, `F_diagonal`, `(G^-1)_diagonal`, and modal `lambda` |
 | `*_vpt2_bands.csv` | valid VPT2 | overtone/combination data, intensity and assignment |
 | `*_fermi.txt` | Fermi block present | original ORCA Fermi-analysis block |
 
@@ -571,7 +626,7 @@ Disable CSV output with:
 
 # 15. Selected internal-coordinate set
 
-The terminal output prints the independent internal-coordinate set actually used for the PED, for example:
+The terminal output prints the independent internal-coordinate set actually used for the selected PED/TED analysis, for example:
 
 ```text
 # Selected internal-coordinate set:
@@ -593,6 +648,7 @@ Inspect this especially for complex molecules, metal-containing systems, unusual
 | `--bond-scale` | 1.25 | distance factor for bond detection |
 | `--linear-cut` | 175 deg | angles at/above threshold treated as linear bends |
 | `--min-freq` | 20 cm^-1 | ignore modes with absolute frequency below threshold |
+| `--energy-distribution {ped,ted}` / `--distribution {ped,ted}` | `ped` | choose PED or TED decomposition |
 | `--top` | 5 | number of primitive coordinates shown with `--show-raw` |
 | `--min-percent` | 1% | primitive-coordinate reporting threshold |
 | `--family-top` | 4 | maximum grouped families displayed |
@@ -633,7 +689,7 @@ A very small value indicates that the selected internal-coordinate representatio
 
 ## 17.2 Degenerate and collective modes
 
-Within an exactly or nearly degenerate subspace, individual eigenvectors can rotate without changing the physical subspace. Primitive-coordinate percentages can therefore be basis-dependent. Grouped assignments and the degenerate set as a whole are usually more robust.
+Within an exactly or nearly degenerate subspace, individual eigenvectors can rotate without changing the physical subspace. Primitive-coordinate PED/TED percentages can therefore be basis-dependent. Grouped assignments and the degenerate set as a whole are usually more robust.
 
 ## 17.3 VPT2 containing `inf`/`nan`
 
@@ -651,12 +707,12 @@ Bond recognition uses distances and covalent radii. For clusters, noncovalent co
 
 1. Optimize the geometry to a well-converged minimum.
 2. Compute and inspect the central Hessian; check for imaginary frequencies.
-3. Run `orca_ped_analyzer.py` on the central Hessian.
+3. Run `orca_ped_analyzer.py` on the central Hessian and select PED (default) or TED as appropriate.
 4. Inspect the reconstruction error and selected internal-coordinate set.
 5. For complex systems, use `--show-generic --show-raw`.
 6. If VPT2 is still running, use the harmonic outputs safely; partial anharmonic data are ignored.
 7. When VPT2 finishes, rerun the analyzer. If the result is valid, VPT2 fundamental frequencies automatically take priority in the relevant tables and spectra.
-8. Open the CJSON in Avogadro to inspect all harmonic normal modes using the same mode numbering as the PED output.
+8. Open the CJSON in Avogadro to inspect all harmonic normal modes using the same mode numbering as the selected PED/TED output.
 9. Use the three IR spectra to separate fundamentals, anharmonic-only additional bands and the complete simulated spectrum.
 10. Archive the entire `*_analysis` directory with the calculation data.
 
@@ -671,7 +727,7 @@ For a main-text assignment table, a useful minimal structure is:
 
 For Supporting Information, retain more detail:
 
-| Mode | Harmonic / cm^-1 | VPT2 / cm^-1 | Anharmonic shift | Calculated IR intensity | Assignment | Grouped PED |
+| Mode | Harmonic / cm^-1 | VPT2 / cm^-1 | Anharmonic shift | Calculated IR intensity | Assignment | Grouped PED/TED |
 |---:|---:|---:|---:|---:|---|---|
 | ... | ... | ... | ... | ... | ... | ... |
 
@@ -679,9 +735,9 @@ Recommended reporting principles:
 
 - use VPT2 fundamentals when the VPT2 result is valid;
 - keep harmonic frequencies in the Supporting Information because the PED belongs to the harmonic zero-order modes;
-- report multiple grouped PED contributions when no family dominates clearly;
+- report multiple grouped PED/TED contributions when no family dominates clearly;
 - avoid reporting every primitive coordinate in the main paper;
-- provide the complete primitive PED as machine-readable Supporting Data when useful;
+- provide the complete primitive PED/TED table as machine-readable Supporting Data when useful;
 - keep overtone/combination assignments separate from fundamentals;
 - explicitly discuss Fermi mixing when it materially affects a spectral assignment.
 
@@ -694,10 +750,16 @@ python3 orca_ped_analyzer.py --version
 python3 orca_ped_analyzer.py --help
 ```
 
-Standard analysis with automatic VPT2 detection:
+Standard PED analysis with automatic VPT2 detection:
 
 ```bash
 python3 orca_ped_analyzer.py molecule.hess
+```
+
+TED analysis:
+
+```bash
+python3 orca_ped_analyzer.py molecule.hess --energy-distribution ted
 ```
 
 Detailed analysis with 5 cm^-1 IR FWHM:
@@ -730,9 +792,14 @@ Open vibrations in Avogadro:
 avogadro2 "$(realpath molecule_analysis/molecule_avogadro_vibrations.cjson)"
 ```
 
-Remember: **one central Hessian only**. VPT2 is added through the ORCA output file; animated vectors remain harmonic. When VPT2 is valid, VPT2 fundamentals take priority in the corresponding spectra and tables.
+Remember: **one central Hessian only**. PED is the default; TED is selected with `--energy-distribution ted` or from the GUI. VPT2 is added through the ORCA output file; animated vectors remain harmonic. When VPT2 is valid, VPT2 fundamentals take priority in the corresponding spectra and tables.
 
-# 21. Development and validation disclaimer
+# 21. Method references
+
+1. E. Rytter, "Total energy distribution method for classification of normal modes of vibration," *J. Chem. Phys.* **60**, 3882-3883 (1974). DOI: [10.1063/1.1680833](https://doi.org/10.1063/1.1680833).
+2. K. Oenen, D. F. Dinu, and K. R. Liedl, "Determining internal coordinate sets for optimal representation of molecular vibration," *J. Chem. Phys.* **160**, 014104 (2024). DOI: [10.1063/5.0180657](https://doi.org/10.1063/5.0180657).
+
+# 22. Development and validation disclaimer
 
 I am primarily a **user of computational chemistry software and an amateur programmer**, rather than a professional software developer. The development of ORCA PED Analyzer made extensive use of **AI-assisted programming**. To reduce the risk of introducing unnoticed errors, I developed the program incrementally, testing individual components and successive versions against real computational outputs and checking the consistency of the results at each stage.
 
