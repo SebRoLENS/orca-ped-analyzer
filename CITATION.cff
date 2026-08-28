@@ -7,15 +7,16 @@ authors:
     given-names: S.
     orcid: "https://orcid.org/0000-0002-9553-7788"
 repository-code: "https://github.com/SebRoLENS/orca-ped-analyzer"
-doi: "10.5281/zenodo.22096132"
-url: "https://doi.org/10.5281/zenodo.22096132"
-version: "2.9.13"
-date-released: 2026-08-25
+url: "https://github.com/SebRoLENS/orca-ped-analyzer/releases/tag/v2.10.0"
+version: "2.10.0"
+date-released: 2026-08-28
 license: MIT
 keywords:
   - ORCA
   - potential energy distribution
   - PED
+  - total energy distribution
+  - TED
   - vibrational analysis
   - normal modes
   - vibrational spectroscopy
@@ -26,6 +27,6 @@ keywords:
   - quantum chemistry
 abstract: >-
   ORCA PED Analyzer is a molecule-agnostic Python utility for assigning ORCA
-  harmonic normal modes through a normalized diagonal potential-energy
-  distribution in internal coordinates, with optional VPT2/GVPT2 integration,
+  harmonic normal modes through selectable normalized diagonal potential-energy
+  (PED) or total-energy (TED) distributions in internal coordinates, with optional VPT2/GVPT2 integration,
   IR-spectrum generation, CSV export, and Avogadro CJSON export.
