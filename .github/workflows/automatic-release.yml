@@ -14,8 +14,6 @@ permissions:
   contents: write
   actions: write
 
-# Only one release pipeline may run at a time. This is the sole automatic
-# workflow allowed to write release metadata to main.
 concurrency:
   group: orca-ped-analyzer-release-pipeline
   cancel-in-progress: false
@@ -24,9 +22,6 @@ jobs:
   release:
     if: github.actor != 'github-actions[bot]' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
-    outputs:
-      version: ${{ steps.prepare.outputs.version }}
-      commit_sha: ${{ steps.commit.outputs.commit_sha }}
     steps:
       - name: Checkout main
         uses: actions/checkout@v6
@@ -97,15 +92,10 @@ jobs:
           git add orca_ped_analyzer.py README.md CITATION.cff \
             docs/ORCA_PED_Analyzer_Manual.md docs/ORCA_PED_Analyzer_Manual.pdf
           git commit -m "Prepare v${VERSION} release"
-
-          # There should be no competing automatic writer. If main changed for
-          # an external reason, rebase once onto it rather than force-pushing.
           git fetch origin main
           git rebase origin/main
           git push origin HEAD:main
-
-          SHA="$(git rev-parse HEAD)"
-          echo "commit_sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Create release tag
         env:
@@ -127,22 +117,20 @@ jobs:
           cat > /tmp/release-notes.md <<EOF
           ## ORCA PED Analyzer v${VERSION}
 
-          Automated release generated from the validated source on main.
+          Automated release generated from validated source on main.
 
           Desktop applications are being built automatically for Linux x86_64,
           Windows x86_64, macOS Apple Silicon, and macOS Intel.
 
           **Zenodo DOI:** pending automatic archival.
           EOF
-
           gh release create "v${VERSION}" \
             --repo "$GITHUB_REPOSITORY" \
             --title "ORCA PED Analyzer v${VERSION}" \
             --notes-file /tmp/release-notes.md \
             --verify-tag
 
-      - name: Dispatch desktop builds
-        id: desktop
+      - name: Dispatch and wait for desktop builds
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.prepare.outputs.version }}
@@ -154,25 +142,16 @@ jobs:
             --ref main \
             -f "source_ref=v${VERSION}"
 
-          echo "Waiting for the desktop-build workflow to start..."
           RUN_ID=""
           for attempt in $(seq 1 30); do
             RUN_ID="$(gh api \
               "repos/${GITHUB_REPOSITORY}/actions/workflows/build-desktop-apps.yml/runs?event=workflow_dispatch&per_page=20" \
               --jq ".workflow_runs[] | select(.created_at >= \"${DISPATCHED_AT}\") | .id" | head -n1)"
-            if [ -n "$RUN_ID" ]; then
-              break
-            fi
+            [ -n "$RUN_ID" ] && break
             sleep 4
           done
-
-          if [ -z "$RUN_ID" ]; then
-            echo "Could not locate the dispatched desktop-build run."
-            exit 1
-          fi
-
+          [ -n "$RUN_ID" ] || { echo 'Could not locate desktop-build run.'; exit 1; }
           echo "Desktop-build run: $RUN_ID"
-          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
           gh run watch "$RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status
 
       - name: Verify desktop release assets
@@ -182,50 +161,40 @@ jobs:
         run: |
           set -euo pipefail
           ASSETS="$(gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')"
-          for pattern in \
+          for asset in \
             "ORCA-PED-Analyzer-v${VERSION}-Linux-x86_64.AppImage" \
             "ORCA-PED-Analyzer-v${VERSION}-Windows-x86_64.exe" \
             "ORCA-PED-Analyzer-v${VERSION}-macOS-arm64.dmg" \
             "ORCA-PED-Analyzer-v${VERSION}-macOS-x86_64.dmg" \
             "SHA256SUMS.txt"; do
-            echo "$ASSETS" | grep -Fx "$pattern" >/dev/null || {
-              echo "Missing release asset: $pattern"
-              exit 1
-            }
+            echo "$ASSETS" | grep -Fx "$asset" >/dev/null || { echo "Missing release asset: $asset"; exit 1; }
           done
-          echo "All desktop release assets are present."
 
-      - name: Wait for Zenodo DOI
+      - name: Try Zenodo synchronization
         id: zenodo
         env:
           VERSION: ${{ steps.prepare.outputs.version }}
         run: |
-          set -euo pipefail
           DOI=""
-          for attempt in $(seq 1 60); do
+          for attempt in $(seq 1 15); do
             set +e
             DOI="$(python3 .github/scripts/sync_zenodo_doi.py --version "$VERSION")"
             STATUS=$?
             set -e
-
             if [ "$STATUS" -eq 0 ] && [ -n "$DOI" ]; then
               echo "Found Zenodo DOI: $DOI"
               break
             fi
-
-            echo "Zenodo record for v${VERSION} not visible yet (${attempt}/60)."
+            echo "Zenodo record for v${VERSION} not visible yet (${attempt}/15)."
             sleep 60
           done
-
+          echo "doi=$DOI" >> "$GITHUB_OUTPUT"
           if [ -z "$DOI" ]; then
-            echo "Zenodo DOI was not found within one hour."
-            exit 1
+            echo "Zenodo is still pending; scheduled DOI synchronization will retry later."
           fi
 
-          python3 .github/scripts/sync_zenodo_doi.py --version "$VERSION" --apply >/dev/null
-          echo "doi=$DOI" >> "$GITHUB_OUTPUT"
-
       - name: Commit DOI and citation metadata
+        if: steps.zenodo.outputs.doi != ''
         env:
           VERSION: ${{ steps.prepare.outputs.version }}
           DOI: ${{ steps.zenodo.outputs.doi }}
@@ -234,13 +203,10 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
           python3 .github/scripts/sync_zenodo_doi.py --version "$VERSION" --apply >/dev/null
-
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add README.md CITATION.cff
-          if git diff --cached --quiet; then
-            echo "README and CITATION.cff are already up to date."
-          else
+          if ! git diff --cached --quiet; then
             git commit -m "Link v${VERSION} to Zenodo DOI ${DOI}"
             git push origin HEAD:main
           fi
@@ -251,6 +217,11 @@ jobs:
           VERSION: ${{ steps.prepare.outputs.version }}
           DOI: ${{ steps.zenodo.outputs.doi }}
         run: |
+          if [ -n "$DOI" ]; then
+            DOI_LINE="**Zenodo DOI:** https://doi.org/${DOI}"
+          else
+            DOI_LINE="**Zenodo DOI:** pending automatic archival; scheduled synchronization is active."
+          fi
           cat > /tmp/release-notes.md <<EOF
           ## ORCA PED Analyzer v${VERSION}
 
@@ -259,9 +230,6 @@ jobs:
           Desktop applications are available for Linux x86_64, Windows x86_64,
           macOS Apple Silicon, and macOS Intel. SHA-256 checksums are included.
 
-          **Zenodo DOI:** https://doi.org/${DOI}
+          ${DOI_LINE}
           EOF
-
-          gh release edit "v${VERSION}" \
-            --repo "$GITHUB_REPOSITORY" \
-            --notes-file /tmp/release-notes.md
+          gh release edit "v${VERSION}" --repo "$GITHUB_REPOSITORY" --notes-file /tmp/release-notes.md
