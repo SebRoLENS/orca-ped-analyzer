@@ -73,9 +73,14 @@ def read_version(text: str) -> str:
 
 
 def git_previous_script() -> str | None:
+    # On a re-run, checkout may point to a newer maintenance commit on main.
+    # Compare against the parent of the commit that originally triggered the
+    # release so an explicit version bump is still detected correctly.
+    event_sha = os.environ.get("GITHUB_SHA", "").strip()
+    base = event_sha if os.environ.get("GITHUB_ACTIONS") == "true" and event_sha else "HEAD"
     try:
         return subprocess.check_output(
-            ["git", "show", "HEAD^:orca_ped_analyzer.py"],
+            ["git", "show", f"{base}^:orca_ped_analyzer.py"],
             cwd=ROOT,
             text=True,
             stderr=subprocess.DEVNULL,
@@ -154,11 +159,17 @@ Previous releases remain archived separately on Zenodo.
 
 def update_manual(old_version: str, new_version: str) -> None:
     text = MANUAL.read_text()
-    if old_version not in text:
-        raise SystemExit(
-            f"Manual does not contain the current version {old_version}; refusing to tag an inconsistent release"
-        )
-    MANUAL.write_text(text.replace(old_version, new_version))
+    if new_version in text:
+        # The feature branch may already have versioned the manual. This is
+        # consistent with the requested release, so no replacement is needed.
+        return
+    if old_version in text:
+        MANUAL.write_text(text.replace(old_version, new_version))
+        return
+    raise SystemExit(
+        f"Manual contains neither release version {new_version} nor previous version {old_version}; "
+        "refusing to tag an inconsistent release"
+    )
 
 
 def update_citation(new_version: str) -> None:
