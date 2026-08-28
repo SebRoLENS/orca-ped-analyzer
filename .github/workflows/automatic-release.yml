@@ -8,31 +8,48 @@ on:
       - 'orca_ped_analyzer.py'
       - 'orca_ped_analyzer_gui.py'
       - '.release-trigger'
+  workflow_dispatch:
 
 permissions:
   contents: write
   actions: write
 
+# Only one release pipeline may run at a time. This is the sole automatic
+# workflow allowed to write release metadata to main.
+concurrency:
+  group: orca-ped-analyzer-release-pipeline
+  cancel-in-progress: false
+
 jobs:
-  prepare-release:
-    if: github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    concurrency:
-      group: automatic-release-prepare
-      cancel-in-progress: false
+  release:
+    if: github.actor != 'github-actions[bot]' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.prepare.outputs.version }}
       commit_sha: ${{ steps.commit.outputs.commit_sha }}
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout main
+        uses: actions/checkout@v6
         with:
           ref: main
-          fetch-depth: 2
+          fetch-depth: 0
 
-      - name: Install manual build dependencies
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install test and manual dependencies
         run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
           sudo apt-get update
           sudo apt-get install -y pandoc texlive-xetex texlive-latex-extra texlive-fonts-recommended
+
+      - name: Validate source before release
+        run: |
+          python -m py_compile orca_ped_analyzer.py orca_ped_analyzer_gui.py
+          python -m unittest discover -s tests -v
 
       - name: Prepare next version
         id: prepare
@@ -49,16 +66,44 @@ jobs:
             --pdf-engine=xelatex \
             --output docs/ORCA_PED_Analyzer_Manual.pdf
 
+      - name: Validate prepared release
+        run: |
+          VERSION="${{ steps.prepare.outputs.version }}"
+          python -m py_compile orca_ped_analyzer.py orca_ped_analyzer_gui.py
+          python -m unittest discover -s tests -v
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          version = '${{ steps.prepare.outputs.version }}'
+          text = Path('orca_ped_analyzer.py').read_text()
+          m = re.search(r'^__version__\s*=\s*"([^"]+)"', text, re.M)
+          if not m or m.group(1) != version:
+              raise SystemExit(f'Core version mismatch: expected {version}')
+          for path in ['README.md', 'docs/ORCA_PED_Analyzer_Manual.md', 'CITATION.cff']:
+              if version not in Path(path).read_text():
+                  raise SystemExit(f'{path} does not contain release version {version}')
+          if not Path('docs/ORCA_PED_Analyzer_Manual.pdf').is_file():
+              raise SystemExit('Versioned PDF manual was not generated')
+          print(f'Release metadata validated for v{version}')
+          PY
+
       - name: Commit release metadata
         id: commit
         run: |
+          set -euo pipefail
           VERSION="${{ steps.prepare.outputs.version }}"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add orca_ped_analyzer.py README.md CITATION.cff \
             docs/ORCA_PED_Analyzer_Manual.md docs/ORCA_PED_Analyzer_Manual.pdf
           git commit -m "Prepare v${VERSION} release"
+
+          # There should be no competing automatic writer. If main changed for
+          # an external reason, rebase once onto it rather than force-pushing.
+          git fetch origin main
+          git rebase origin/main
           git push origin HEAD:main
+
           SHA="$(git rev-parse HEAD)"
           echo "commit_sha=$SHA" >> "$GITHUB_OUTPUT"
 
@@ -66,8 +111,9 @@ jobs:
         env:
           VERSION: ${{ steps.prepare.outputs.version }}
         run: |
+          set -euo pipefail
           if git ls-remote --exit-code --tags origin "refs/tags/v${VERSION}" >/dev/null 2>&1; then
-            echo "Tag v${VERSION} already exists."
+            echo "Tag v${VERSION} already exists; refusing to overwrite it."
             exit 1
           fi
           git tag "v${VERSION}"
@@ -81,10 +127,10 @@ jobs:
           cat > /tmp/release-notes.md <<EOF
           ## ORCA PED Analyzer v${VERSION}
 
-          Automated release generated after an update to the ORCA PED Analyzer source code.
+          Automated release generated from the validated source on main.
 
-          Desktop applications are built automatically for Linux x86_64, Windows x86_64,
-          macOS Apple Silicon, and macOS Intel.
+          Desktop applications are being built automatically for Linux x86_64,
+          Windows x86_64, macOS Apple Silicon, and macOS Intel.
 
           **Zenodo DOI:** pending automatic archival.
           EOF
@@ -96,11 +142,13 @@ jobs:
             --verify-tag
 
       - name: Dispatch desktop builds
+        id: desktop
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.prepare.outputs.version }}
-          RELEASE_SHA: ${{ steps.commit.outputs.commit_sha }}
         run: |
+          set -euo pipefail
+          DISPATCHED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           gh workflow run build-desktop-apps.yml \
             --repo "$GITHUB_REPOSITORY" \
             --ref main \
@@ -109,11 +157,9 @@ jobs:
           echo "Waiting for the desktop-build workflow to start..."
           RUN_ID=""
           for attempt in $(seq 1 30); do
-            RUN_ID="$(
-              gh api \
-                "repos/${GITHUB_REPOSITORY}/actions/workflows/build-desktop-apps.yml/runs?event=workflow_dispatch&head_sha=${RELEASE_SHA}&per_page=10" \
-                --jq '.workflow_runs[0].id // empty'
-            )"
+            RUN_ID="$(gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/build-desktop-apps.yml/runs?event=workflow_dispatch&per_page=20" \
+              --jq ".workflow_runs[] | select(.created_at >= \"${DISPATCHED_AT}\") | .id" | head -n1)"
             if [ -n "$RUN_ID" ]; then
               break
             fi
@@ -126,23 +172,35 @@ jobs:
           fi
 
           echo "Desktop-build run: $RUN_ID"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
           gh run watch "$RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status
 
-  sync-zenodo-doi:
-    needs: prepare-release
-    if: ${{ always() && needs.prepare-release.outputs.version != '' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: main
-          fetch-depth: 1
+      - name: Verify desktop release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          ASSETS="$(gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')"
+          for pattern in \
+            "ORCA-PED-Analyzer-v${VERSION}-Linux-x86_64.AppImage" \
+            "ORCA-PED-Analyzer-v${VERSION}-Windows-x86_64.exe" \
+            "ORCA-PED-Analyzer-v${VERSION}-macOS-arm64.dmg" \
+            "ORCA-PED-Analyzer-v${VERSION}-macOS-x86_64.dmg" \
+            "SHA256SUMS.txt"; do
+            echo "$ASSETS" | grep -Fx "$pattern" >/dev/null || {
+              echo "Missing release asset: $pattern"
+              exit 1
+            }
+          done
+          echo "All desktop release assets are present."
 
-      - name: Wait for Zenodo GitHub integration
+      - name: Wait for Zenodo DOI
         id: zenodo
         env:
-          VERSION: ${{ needs.prepare-release.outputs.version }}
+          VERSION: ${{ steps.prepare.outputs.version }}
         run: |
+          set -euo pipefail
           DOI=""
           for attempt in $(seq 1 60); do
             set +e
@@ -155,11 +213,7 @@ jobs:
               break
             fi
 
-            if [ "$STATUS" -eq 3 ]; then
-              echo "Zenodo API error on attempt ${attempt}/60; retrying."
-            else
-              echo "Zenodo record for v${VERSION} not visible yet (attempt ${attempt}/60)."
-            fi
+            echo "Zenodo record for v${VERSION} not visible yet (${attempt}/60)."
             sleep 60
           done
 
@@ -173,32 +227,37 @@ jobs:
 
       - name: Commit DOI and citation metadata
         env:
-          VERSION: ${{ needs.prepare-release.outputs.version }}
+          VERSION: ${{ steps.prepare.outputs.version }}
           DOI: ${{ steps.zenodo.outputs.doi }}
         run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+          python3 .github/scripts/sync_zenodo_doi.py --version "$VERSION" --apply >/dev/null
+
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add README.md CITATION.cff
           if git diff --cached --quiet; then
             echo "README and CITATION.cff are already up to date."
-            exit 0
+          else
+            git commit -m "Link v${VERSION} to Zenodo DOI ${DOI}"
+            git push origin HEAD:main
           fi
-          git commit -m "Link v${VERSION} to Zenodo DOI ${DOI}"
-          git push origin HEAD:main
 
-      - name: Add DOI to GitHub release notes
+      - name: Finalize GitHub release notes
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ needs.prepare-release.outputs.version }}
+          VERSION: ${{ steps.prepare.outputs.version }}
           DOI: ${{ steps.zenodo.outputs.doi }}
         run: |
           cat > /tmp/release-notes.md <<EOF
           ## ORCA PED Analyzer v${VERSION}
 
-          Automated release generated after an update to the ORCA PED Analyzer source code.
+          Validated automated release.
 
           Desktop applications are available for Linux x86_64, Windows x86_64,
-          macOS Apple Silicon, and macOS Intel.
+          macOS Apple Silicon, and macOS Intel. SHA-256 checksums are included.
 
           **Zenodo DOI:** https://doi.org/${DOI}
           EOF
