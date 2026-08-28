@@ -1,0 +1,113 @@
+name: Sync Zenodo DOI
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: orca-ped-analyzer-release-pipeline
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Read current released version
+        id: version
+        run: |
+          VERSION="$(python3 - <<'PY'
+          import re
+          from pathlib import Path
+          text = Path('orca_ped_analyzer.py').read_text()
+          m = re.search(r'^__version__\s*=\s*"([^"]+)"', text, re.M)
+          if not m:
+              raise SystemExit('Version not found')
+          print(m.group(1))
+          PY
+          )"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Current version: $VERSION"
+
+      - name: Check that GitHub release exists
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
+          else
+            echo "No GitHub release v${VERSION}; nothing to synchronize."
+            echo 'exists=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Look for Zenodo DOI
+        if: steps.release.outputs.exists == 'true'
+        id: zenodo
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set +e
+          DOI="$(python3 .github/scripts/sync_zenodo_doi.py --version "$VERSION")"
+          STATUS=$?
+          set -e
+          if [ "$STATUS" -eq 0 ] && [ -n "$DOI" ]; then
+            echo "doi=$DOI" >> "$GITHUB_OUTPUT"
+            echo "Found Zenodo DOI: $DOI"
+          else
+            echo 'doi=' >> "$GITHUB_OUTPUT"
+            echo "Zenodo DOI is not available yet; this is not an error."
+          fi
+
+      - name: Update repository metadata
+        if: steps.zenodo.outputs.doi != ''
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          DOI: ${{ steps.zenodo.outputs.doi }}
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+          python3 .github/scripts/sync_zenodo_doi.py --version "$VERSION" --apply >/dev/null
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md CITATION.cff
+          if git diff --cached --quiet; then
+            echo 'Repository metadata already contains this DOI.'
+          else
+            git commit -m "Link v${VERSION} to Zenodo DOI ${DOI}"
+            git push origin HEAD:main
+          fi
+
+      - name: Update GitHub release notes
+        if: steps.zenodo.outputs.doi != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          DOI: ${{ steps.zenodo.outputs.doi }}
+        run: |
+          cat > /tmp/release-notes.md <<EOF
+          ## ORCA PED Analyzer v${VERSION}
+
+          Validated automated release.
+
+          Desktop applications are available for Linux x86_64, Windows x86_64,
+          macOS Apple Silicon, and macOS Intel. SHA-256 checksums are included.
+
+          **Zenodo DOI:** https://doi.org/${DOI}
+          EOF
+          gh release edit "v${VERSION}" --repo "$GITHUB_REPOSITORY" --notes-file /tmp/release-notes.md
