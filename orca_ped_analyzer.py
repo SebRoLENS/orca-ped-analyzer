@@ -60,7 +60,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import numpy as np
 
-__version__ = "2.10.1"
+__version__ = "2.10.2"
 MANUAL_URL = "https://github.com/SebRoLENS/orca-ped-analyzer/blob/main/docs/ORCA_PED_Analyzer_Manual.md"
 GITHUB_URL = "https://github.com/SebRoLENS/orca-ped-analyzer"
 CONTACT_EMAIL = "romi@lens.unifi.it"
