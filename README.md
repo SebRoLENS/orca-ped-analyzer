@@ -1,6 +1,9 @@
 # ORCA PED Analyzer
 
 [![Version](https://img.shields.io/github/v/release/SebRoLENS/orca-ped-analyzer)](https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest)
+[![Windows](https://img.shields.io/badge/Windows-x86__64-0078D4?logo=windows)](https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest)
+[![Linux](https://img.shields.io/badge/Linux-x86__64-FCC624?logo=linux&logoColor=black)](https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest)
+[![macOS](https://img.shields.io/badge/macOS-Intel%20%7C%20Apple%20Silicon-000000?logo=apple)](https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22145181.svg)](https://doi.org/10.5281/zenodo.22145181)
 
 **ORCA PED Analyzer** is a molecule-agnostic tool for assigning ORCA harmonic normal modes through selectable potential-energy-distribution (**PED**) or total-energy-distribution (**TED**) analysis, with optional VPT2/GVPT2 integration, IR-spectrum generation, CSV export, and Avogadro CJSON export.
