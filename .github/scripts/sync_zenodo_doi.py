@@ -18,11 +18,25 @@ README = ROOT / "README.md"
 CITATION = ROOT / "CITATION.cff"
 
 VERSION_RE = re.compile(r'^__version__\s*=\s*"(\d+\.\d+\.\d+)"', re.M)
+TITLE_RE = re.compile(
+    r'(?m)^(?:#\s+ORCA PED Analyzer\s*|<h1\b[^>]*>\s*ORCA PED Analyzer\s*</h1>)$'
+)
 VERSION_BADGE_RE = re.compile(
     r"^\[!\[(?:Latest release|Version)\]\([^)]+\)\]\([^)]+\)[ \t]*$", re.M
 )
 DOI_BADGE_RE = re.compile(
     r"^\[!\[DOI\]\([^)]+\)\]\([^)]+\)[ \t]*$", re.M
+)
+HTML_VERSION_BADGE_RE = re.compile(
+    r'<a\s+href="https://github\.com/SebRoLENS/orca-ped-analyzer/releases/latest">\s*'
+    r'<img\s+src="https://img\.shields\.io/github/v/release/SebRoLENS/orca-ped-analyzer"\s+'
+    r'alt="Version"\s*>\s*</a>',
+    re.I,
+)
+HTML_DOI_BADGE_RE = re.compile(
+    r'<a\s+href="https://doi\.org/[^"]+">\s*'
+    r'<img\s+src="https://zenodo\.org/badge/DOI/[^"]+\.svg"\s+alt="DOI"\s*>\s*</a>',
+    re.I,
 )
 VERSION_BADGE = (
     "[![Version](https://img.shields.io/github/v/release/SebRoLENS/orca-ped-analyzer)]"
@@ -68,7 +82,7 @@ def zenodo_records(query: str) -> list[dict]:
         url,
         headers={
             "Accept": "application/json",
-            "User-Agent": "orca-ped-analyzer-release-bot/1.2",
+            "User-Agent": "orca-ped-analyzer-release-bot/1.3",
         },
     )
     try:
@@ -147,20 +161,36 @@ def replace_section(text: str, heading: str, next_heading: str, body: str) -> st
 
 def set_readme_badges(text: str, doi: str) -> str:
     doi_url = f"https://doi.org/{doi}"
-    doi_badge = f"[![DOI](https://zenodo.org/badge/DOI/{doi}.svg)]({doi_url})"
+    markdown_doi_badge = f"[![DOI](https://zenodo.org/badge/DOI/{doi}.svg)]({doi_url})"
+    html_doi_badge = (
+        f'<a href="{doi_url}"><img src="https://zenodo.org/badge/DOI/{doi}.svg" alt="DOI"></a>'
+    )
 
+    # Preserve the current centered HTML header when present.
+    if HTML_VERSION_BADGE_RE.search(text):
+        if HTML_DOI_BADGE_RE.search(text):
+            text = HTML_DOI_BADGE_RE.sub(html_doi_badge, text, count=1)
+        else:
+            text = HTML_VERSION_BADGE_RE.sub(
+                lambda m: m.group(0) + "\n  " + html_doi_badge,
+                text,
+                count=1,
+            )
+        return text
+
+    # Backward compatibility with the former Markdown badge layout.
     if VERSION_BADGE_RE.search(text):
         text = VERSION_BADGE_RE.sub(VERSION_BADGE, text, count=1)
     else:
-        title = "# ORCA PED Analyzer\n"
-        if title not in text:
+        title = TITLE_RE.search(text)
+        if not title:
             raise SystemExit("Could not find ORCA PED Analyzer README title")
-        text = text.replace(title, title + "\n" + VERSION_BADGE + "\n", 1)
+        text = text[: title.end()] + "\n\n" + VERSION_BADGE + text[title.end():]
 
     if DOI_BADGE_RE.search(text):
-        text = DOI_BADGE_RE.sub(doi_badge, text, count=1)
+        text = DOI_BADGE_RE.sub(markdown_doi_badge, text, count=1)
     else:
-        text = text.replace(VERSION_BADGE, VERSION_BADGE + "\n" + doi_badge, 1)
+        text = text.replace(VERSION_BADGE, VERSION_BADGE + "\n" + markdown_doi_badge, 1)
     return text
 
 
