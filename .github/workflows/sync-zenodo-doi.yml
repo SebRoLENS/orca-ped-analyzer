@@ -2,8 +2,11 @@ name: Sync Zenodo DOI
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '17 * * * *'
+  workflow_run:
+    workflows:
+      - Automatic release
+    types:
+      - completed
 
 permissions:
   contents: write
@@ -14,6 +17,7 @@ concurrency:
 
 jobs:
   sync:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -54,22 +58,29 @@ jobs:
             echo 'exists=false' >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Look for Zenodo DOI
+      - name: Wait for Zenodo DOI
         if: steps.release.outputs.exists == 'true'
         id: zenodo
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          set +e
-          DOI="$(python3 .github/scripts/sync_zenodo_doi.py --version "$VERSION")"
-          STATUS=$?
-          set -e
-          if [ "$STATUS" -eq 0 ] && [ -n "$DOI" ]; then
-            echo "doi=$DOI" >> "$GITHUB_OUTPUT"
-            echo "Found Zenodo DOI: $DOI"
-          else
-            echo 'doi=' >> "$GITHUB_OUTPUT"
-            echo "Zenodo DOI is not available yet; this is not an error."
+          DOI=""
+          for attempt in $(seq 1 30); do
+            set +e
+            DOI="$(python3 .github/scripts/sync_zenodo_doi.py --version "$VERSION")"
+            STATUS=$?
+            set -e
+            if [ "$STATUS" -eq 0 ] && [ -n "$DOI" ]; then
+              echo "Found Zenodo DOI: $DOI"
+              break
+            fi
+            DOI=""
+            echo "Zenodo record for v${VERSION} is not visible yet (${attempt}/30)."
+            sleep 30
+          done
+          echo "doi=$DOI" >> "$GITHUB_OUTPUT"
+          if [ -z "$DOI" ]; then
+            echo "Zenodo DOI is still pending. The workflow ends successfully and can be re-run manually later."
           fi
 
       - name: Update repository metadata
