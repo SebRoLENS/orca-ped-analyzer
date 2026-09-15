@@ -9,7 +9,7 @@
   <a href="https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest"><img src="https://img.shields.io/badge/Windows-x86__64-0078D4?logo=windows" alt="Windows"></a>
   <a href="https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest"><img src="https://img.shields.io/badge/Linux-x86__64-FCC624?logo=linux&logoColor=black" alt="Linux"></a>
   <a href="https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest"><img src="https://img.shields.io/badge/macOS-Intel%20%7C%20Apple%20Silicon-000000?logo=apple" alt="macOS"></a>
-  <a href="https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest"><img src="https://img.shields.io/badge/DOI-pending-lightgrey" alt="DOI"></a>
+  <a href="https://doi.org/10.5281/zenodo.22768390"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.22768390.svg" alt="DOI"></a>
 </p>
 
 **ORCA PED Analyzer** is a molecule-agnostic tool for assigning ORCA harmonic normal modes through selectable potential-energy-distribution (**PED**) or total-energy-distribution (**TED**) analysis, with optional VPT2/GVPT2 integration, IR-spectrum generation, CSV export, and Avogadro CJSON export.
@@ -191,9 +191,9 @@ python3 orca_ped_analyzer.py --version
 
 If ORCA PED Analyzer contributes to published research, please acknowledge or cite the software. GitHub also provides a **Cite this repository** entry from [`CITATION.cff`](CITATION.cff).
 
-Version **2.10.3** is archived automatically on Zenodo after the GitHub release is published. The DOI for this release is being assigned and will be inserted here automatically.
+> Romi, S. (2026). *ORCA PED Analyzer* (Version 2.10.3) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.22768390
 
-> Romi, S. (2026). *ORCA PED Analyzer* (Version 2.10.3) [Computer software]. GitHub. https://github.com/SebRoLENS/orca-ped-analyzer/releases/tag/v2.10.3
+DOI: [**10.5281/zenodo.22768390**](https://doi.org/10.5281/zenodo.22768390)
 
 Previous releases remain archived separately on Zenodo.
 
