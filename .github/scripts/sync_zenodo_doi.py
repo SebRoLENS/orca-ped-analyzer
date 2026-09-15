@@ -34,8 +34,7 @@ HTML_VERSION_BADGE_RE = re.compile(
     re.I,
 )
 HTML_DOI_BADGE_RE = re.compile(
-    r'<a\s+href="https://doi\.org/[^"]+">\s*'
-    r'<img\s+src="https://zenodo\.org/badge/DOI/[^"]+\.svg"\s+alt="DOI"\s*>\s*</a>',
+    r'<a\s+href="[^"]+">\s*<img\s+src="[^"]+"\s+alt="DOI"\s*>\s*</a>',
     re.I,
 )
 VERSION_BADGE = (

@@ -26,6 +26,17 @@ DOI_BADGE_RE = re.compile(
     r"^\[!\[DOI\]\([^)]+\)\]\([^)]+\)[ \t]*$", re.M
 )
 
+HTML_VERSION_BADGE_RE = re.compile(
+    r'<a\s+href="https://github\.com/SebRoLENS/orca-ped-analyzer/releases/latest">\s*'
+    r'<img\s+src="https://img\.shields\.io/github/v/release/SebRoLENS/orca-ped-analyzer"\s+'
+    r'alt="Version"\s*>\s*</a>',
+    re.I,
+)
+HTML_DOI_BADGE_RE = re.compile(
+    r'<a\s+href="[^"]+">\s*<img\s+src="[^"]+"\s+alt="DOI"\s*>\s*</a>',
+    re.I,
+)
+
 VERSION_BADGE = (
     "[![Version](https://img.shields.io/github/v/release/SebRoLENS/orca-ped-analyzer)]"
     "(https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest)"
@@ -123,6 +134,17 @@ def replace_section(text: str, heading: str, next_heading: str, body: str) -> st
 
 
 def update_badges_for_pending_doi(text: str) -> str:
+    if HTML_VERSION_BADGE_RE.search(text):
+        pending = (
+            '<a href="https://github.com/SebRoLENS/orca-ped-analyzer/releases/latest">'
+            '<img src="https://img.shields.io/badge/DOI-pending-lightgrey" alt="DOI"></a>'
+        )
+        if HTML_DOI_BADGE_RE.search(text):
+            return HTML_DOI_BADGE_RE.sub(pending, text, count=1)
+        return HTML_VERSION_BADGE_RE.sub(
+            lambda m: m.group(0) + "\n  " + pending, text, count=1
+        )
+
     if VERSION_BADGE_RE.search(text):
         text = VERSION_BADGE_RE.sub(VERSION_BADGE, text, count=1)
     else:
