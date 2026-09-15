@@ -161,11 +161,23 @@ def _analysis_process(argv: list[str], message_queue) -> None:
         pass
 
 
-def _find_ir_dat_files(output_dir: Path) -> list[Path]:
-    """Return the broadened IR .dat spectra written in output_dir, sorted."""
-    if output_dir is None or not output_dir.is_dir():
+def _find_ir_dat_files(output_dir: Path, manifest_name: str | None = None) -> list[Path]:
+    """Read only spectra listed in the successful current run's manifest."""
+    if output_dir is None or manifest_name is None:
         return []
-    return sorted(output_dir.glob("*_IR_*.dat"))
+    manifest=output_dir / manifest_name
+    if not manifest.is_file():
+        return []
+    files=[]
+    for line in manifest.read_text().splitlines():
+        if not line.startswith("  "):
+            continue
+        name=line.strip().rsplit(" - ", 1)[0]
+        if Path(name).name == name and "_IR_" in name and name.endswith(".dat"):
+            path=output_dir / name
+            if path.is_file():
+                files.append(path)
+    return sorted(files)
 
 
 def _spectrum_label(path: Path) -> str:
@@ -294,6 +306,7 @@ class AnalyzerGUI:
         self.status_var = tk.StringVar(value="Select a central ORCA .hess file.")
 
         self.last_output_dir: Path | None = None
+        self.last_manifest_name: str | None = None
 
         self._mp_context = mp.get_context("spawn")
         self._process = None
@@ -548,6 +561,7 @@ class AnalyzerGUI:
             argv.append("--show-raw")
 
         self.last_output_dir = outdir
+        self.last_manifest_name = f"{hess.stem}_manifest.txt"
         self._stop_requested = False
         self._worker_exit_code = None
         self._stderr_header_written = False
@@ -689,7 +703,7 @@ class AnalyzerGUI:
         self._cleanup_process()
 
     def _show_spectra_if_available(self) -> None:
-        dat_files = _find_ir_dat_files(self.last_output_dir)
+        dat_files = _find_ir_dat_files(self.last_output_dir, self.last_manifest_name)
         if not dat_files:
             return
         SpectraViewer(self.root, dat_files)
