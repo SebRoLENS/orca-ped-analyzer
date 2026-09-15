@@ -34,7 +34,17 @@ From the GUI you can:
 - stop a running analysis;
 - open the user manual or the GitHub update page directly from the application.
 
-After a successful run, if broadened IR `.dat` files are available, the GUI automatically opens an **interactive IR spectrum viewer**. The available spectra can be shown or hidden independently, and the embedded Matplotlib toolbar provides the usual zoom, pan, navigation and save controls.
+After a successful run, if broadened IR `.dat` files are available, the GUI automatically opens an **interactive IR spectrum viewer**. Only spectra listed in the current run’s manifest are opened, so older calculations in the same directory are not mixed in. The available spectra can be shown or hidden independently, and the embedded Matplotlib toolbar provides the usual zoom, pan, navigation and save controls.
+
+### Scientific validation fixes
+
+- Near-linear bending derivatives are projected to remove rigid translations and rotations before internal-coordinate selection. These are local first-order harmonic coordinates.
+- `--min-freq` controls assignment reporting only. VPT2 matching and IR spectra retain the complete vibrational mode list, including modes below 20 cm^-1.
+- Non-positive VPT2 fundamental frequencies are rejected, along with non-finite values and mismatched harmonic frequencies.
+- Rerunning spectrum generation removes obsolete analyzer-generated spectra for the same prefix. The GUI reads only spectra in the current run's manifest.
+- `--top` and `--min-percent` limit displayed contributions only; the diagonal PED/TED CSV contains every selected internal coordinate, including zero contributions.
+
+Run the regression suite with `python -m unittest discover -s tests -v`.
 
 ## Download and run
 
@@ -76,7 +86,7 @@ Typical GUI workflow:
 - Generation of broadened IR spectra.
 - Interactive graphical visualization of generated IR spectra.
 - Configurable IR FWHM from the GUI or command line.
-- CSV export of assignments and the selected diagonal PED/TED contributions; TED runs additionally export the full mode-resolved PED/KED/TED matrices.
+- Complete diagonal PED/TED CSV exports for each analyzed mode, independent of display thresholds; TED runs additionally export the full mode-resolved PED/KED/TED matrices.
 - A run manifest lists every generated file together with a brief description of its contents.
 - Avogadro CJSON export for visualization of harmonic normal modes.
 - Live GUI analysis log and the ability to stop a running analysis.

@@ -242,14 +242,15 @@ def _bounded_section(text, start_match, stop_patterns):
     return tail[:stop]
 
 
-def parse_vpt2_output(path, expected_fundamentals=None, expected_harmonics=None):
+def parse_vpt2_output(path, expected_fundamentals=None, expected_harmonics=None,
+                      harmonic_tolerance=10.0):
     """Parse ORCA 6.x VPT2/GVPT2 output without guessing completion from finiteness.
 
     States returned:
       not-detected       no VPT2 analysis found
       incomplete         VPT2 analysis has not reached a reliable end marker/table
-      complete-invalid   calculation ended, but fundamental VPT2 values contain inf/nan
-      complete-valid     calculation ended and all expected fundamentals are finite
+      complete-invalid   calculation ended, but transitions are non-finite/non-positive or mismatched
+      complete-valid     calculation ended and all expected fundamentals are finite and positive
 
     A normally terminated ORCA process can still be complete-invalid numerically.
     """
@@ -314,12 +315,14 @@ def parse_vpt2_output(path, expected_fundamentals=None, expected_harmonics=None)
             m=row["vpt2_mode"]
             if m < len(expected_harmonics) and math.isfinite(row["harmonic"]):
                 delta=abs(float(row["harmonic"])-float(expected_harmonics[m]))
-                if delta > 20.0:
+                if delta > harmonic_tolerance:
                     harmonic_match=False
                     harmonic_mismatches.append((m,delta))
 
     finite_fundamentals=[r for r in fundamental_rows if r["finite"]]
     nonfinite_fundamentals=[r for r in fundamental_rows if not r["finite"]]
+    nonpositive_fundamentals=[r for r in finite_fundamentals
+                             if r["fundamental"] <= 0 or r["harmonic"] <= 0]
 
     # Overtone/combination rows are parsed separately.  Non-finite rows are
     # retained for diagnostics but never used to build an IR spectrum.
@@ -360,7 +363,8 @@ def parse_vpt2_output(path, expected_fundamentals=None, expected_harmonics=None)
          r"Overtones and combination bands",r"={10,}\s*Geometry\s*={10,}"])
 
     run_complete=bool(detected and completion_marker and expected_ok)
-    numerically_valid=bool(run_complete and not nonfinite_fundamentals and harmonic_match)
+    numerically_valid=bool(run_complete and not nonfinite_fundamentals
+                           and not nonpositive_fundamentals and harmonic_match)
 
     if not detected:
         status="not-detected"
@@ -380,6 +384,7 @@ def parse_vpt2_output(path, expected_fundamentals=None, expected_harmonics=None)
         "raw_fundamental_count":raw_fundamental_count,
         "finite_fundamental_count":len(finite_fundamentals),
         "nonfinite_fundamentals":nonfinite_fundamentals,
+        "nonpositive_fundamentals":nonpositive_fundamentals,
         "harmonic_match":harmonic_match,"harmonic_mismatches":harmonic_mismatches,
         "fundamentals":fundamental_rows,
         "bands":bands,"finite_bands":finite_bands,"invalid_bands":invalid_bands,
@@ -539,6 +544,15 @@ def generate_ir_spectra(prefix, harmonic_sticks, vpt2_map, finite_bands, fwhm,
     All spectra from one run use the same x grid and the same normalization
     factor, so their relative amplitudes can be compared directly.
     """
+    # Remove only this prefix's obsolete, analyzer-generated spectra. Other
+    # calculations or user files in a shared output directory are untouched.
+    for name in ("fundamentals", "anharmonic", "complete"):
+        old=Path(f"{prefix}_IR_{name}.dat")
+        if old.is_file():
+            with old.open() as fh:
+                owned=fh.readline().startswith("# ORCA PED Analyzer/VPT2")
+            if owned:
+                old.unlink()
     if step <= 0:
         raise ValueError("IR grid step must be > 0 cm^-1")
 
@@ -861,6 +875,35 @@ def is_linear_molecule(xyz, masses):
         I += m*((np.dot(v,v)*np.eye(3))-np.outer(v,v))
     ev=np.linalg.eigvalsh(I)
     return ev[0] <= max(ev[-1],1e-30)*1e-7
+
+def vibrational_b_matrix(B, xyz):
+    """Remove rigid translation/rotation responses from local B derivatives.
+
+    Fixed transverse axes used by near-linear bends otherwise respond to rigid
+    rotations. Project in Cartesian space before rank selection and force-field
+    transformation; exactly linear molecules have only two rotation directions.
+    This defines local, first-order vibrational coordinates, not finite-amplitude
+    curvilinear coordinates for anharmonic force fields.
+    """
+    r=np.asarray(xyz, dtype=float)-np.mean(xyz, axis=0)
+    translations=[np.tile(e, (len(r), 1)).reshape(-1) for e in np.eye(3)]
+    rotations=[np.cross(e, r).reshape(-1) for e in np.eye(3)]
+    rigid=np.column_stack(translations+rotations)
+    norms=np.linalg.norm(rigid, axis=0)
+    rigid=rigid[:, norms > 1e-12]/norms[norms > 1e-12]
+    u,sv,_=np.linalg.svd(rigid, full_matrices=False)
+    q=u[:, sv > sv[0]*1e-10]
+    return B-(B@q)@q.T
+
+
+def vibrational_mode_indices(freqs, target):
+    """Keep the complete vibrational manifold before applying display cutoffs.
+
+    ORCA normally prints zero-frequency rigid modes. The largest absolute
+    frequencies also preserve imaginary vibrations in the harmonic analysis.
+    """
+    return np.sort(np.argsort(np.abs(freqs), kind="stable")[-target:])
+
 
 def select_nonredundant(candidates, Bcand, target_rank, tol=1e-8):
     # Row-pivoted modified Gram-Schmidt.
@@ -1325,12 +1368,12 @@ def main():
     ap.add_argument("--linear-cut",type=float,default=175.0,
                     help="angles >= this value are treated as linear bends (default 175)")
     ap.add_argument("--min-freq",type=float,default=20.0,
-                    help="ignore modes with |frequency| below this cm^-1 (default 20)")
+                    help="omit assignments below this |frequency|; VPT2 matching and IR keep all vibrations (default 20)")
     ap.add_argument("--energy-distribution","--distribution",choices=("ped","ted"),default="ped",
                     help="harmonic internal-coordinate decomposition: ped (default) or ted (Rytter-type total energy distribution)")
-    ap.add_argument("--top",type=int,default=5,help="number of top primitive IC contributions to print")
+    ap.add_argument("--top",type=int,default=5,help="number of primitive ICs to display; diagonal CSV exports remain complete")
     ap.add_argument("--min-percent",type=float,default=1.0,
-                    help="do not print primitive-IC contributions below this percent")
+                    help="display threshold for primitive ICs; does not truncate diagonal CSV exports")
     ap.add_argument("--family-top",type=int,default=4,
                     help="number of topology-aware grouped families to print (default 4)")
     ap.add_argument("--family-min-percent",type=float,default=2.0,
@@ -1429,7 +1472,7 @@ def main():
         except Exception:
             pass
     candidates=good
-    Bcand=np.vstack(rows)
+    Bcand=vibrational_b_matrix(np.vstack(rows), xyz)
 
     chosen_idx=select_nonredundant(candidates,Bcand,target)
     ics=[candidates[i] for i in chosen_idx]
@@ -1443,10 +1486,8 @@ def main():
     Hrec=B.T@F@B
     relerr=np.linalg.norm(H-Hrec)/max(np.linalg.norm(H),1e-30)
 
-    vib=np.where(np.abs(freqs)>=args.min_freq)[0]
-    if len(vib)>target:
-        vib=vib[np.argsort(np.abs(freqs[vib]))[-target:]]
-        vib=np.sort(vib)
+    full_vib=vibrational_mode_indices(freqs,target)
+    vib=full_vib[np.abs(freqs[full_vib])>=args.min_freq]
     if len(vib)<target:
         print(f"WARNING: found only {len(vib)} modes above threshold; expected {target}.",file=sys.stderr)
 
@@ -1483,11 +1524,13 @@ def main():
         if not vpt2_path.exists():
             print(f"WARNING: requested VPT2 output not found: {vpt2_path}",file=sys.stderr)
         else:
-            vpt2=parse_vpt2_output(vpt2_path, expected_fundamentals=len(vib), expected_harmonics=[float(freqs[mi]) for mi in vib])
+            vpt2=parse_vpt2_output(vpt2_path, expected_fundamentals=len(full_vib),
+                                   expected_harmonics=[float(freqs[mi]) for mi in full_vib],
+                                   harmonic_tolerance=args.vpt2_match_tol)
 
     vpt2_map={}
     if vpt2 and vpt2.get("valid"):
-        vpt2_map=map_vpt2_fundamentals(vib,freqs,vpt2["fundamentals"],args.vpt2_match_tol)
+        vpt2_map=map_vpt2_fundamentals(full_vib,freqs,vpt2["fundamentals"],args.vpt2_match_tol)
         if len(vpt2_map)!=len(vpt2["fundamentals"]):
             print(
                 f"WARNING: mapped {len(vpt2_map)}/{len(vpt2['fundamentals'])} VPT2 fundamentals "
@@ -1524,6 +1567,8 @@ def main():
               f"ORCA-normal-termination={'yes' if vpt2.get('normal_termination') else 'no'}")
         if bad:
             print("#       inf/nan values were found in the VPT2 fundamentals; all VPT2 frequencies/bands are ignored.")
+        if vpt2.get("nonpositive_fundamentals"):
+            print("#       Non-positive harmonic/fundamental transition frequencies were found; all VPT2 frequencies/bands are ignored.")
         if not vpt2.get("harmonic_match",True):
             print("#       Harmonic frequencies in the VPT2 table do not match the central Hessian.")
     else:
@@ -1586,10 +1631,10 @@ def main():
         order=np.argsort(pct[:,col])[::-1]
         rawpieces=[]; rawkeep=0
         for r in order:
-            if pct[r,col] < args.min_percent:
-                continue
             phase="+" if D[r,col]>=0 else "-"
-            rawpieces.append(f"{ic_label(ics[r],elems)} {pct[r,col]:.2f}%[{phase}]")
+            if pct[r,col] >= args.min_percent and rawkeep < args.top:
+                rawpieces.append(f"{ic_label(ics[r],elems)} {pct[r,col]:.2f}%[{phase}]")
+                rawkeep+=1
             detail_row=[int(mi),float(freqs[mi]),vfreq,
                         harmonic_intensity_map.get(int(mi),""),
                         ass,ic_label(ics[r],elems),
@@ -1597,9 +1642,6 @@ def main():
             if distribution_key == "ted":
                 detail_row.extend([float(ginvdiag[r]),float(mode_lambda[col])])
             detailed.append(detail_row)
-            rawkeep+=1
-            if rawkeep>=args.top:
-                break
         if args.show_raw:
             print("      raw ICs: " + "; ".join(rawpieces))
 
@@ -1646,7 +1688,7 @@ def main():
 
     # --- Broadened IR spectra (.dat), positive-going relative absorbance ---
     if not args.no_ir_spectra:
-        harmonic_sticks=harmonic_ir_sticks(ir_rows,vib)
+        harmonic_sticks=harmonic_ir_sticks(ir_rows,full_vib)
         irbase=Path(args.ir_prefix).name if args.ir_prefix else hess_path.stem
         irprefix=str(output_dir/irbase)
         finite_bands_for_ir=(vpt2.get("finite_bands",[]) if vpt2 and vpt2.get("valid") else [])
@@ -1757,7 +1799,7 @@ def main():
                 "frequency_cm-1","intensity_km_mol","intensity_level",
                 "intensity_source","assignment"
             ])
-            for mi in vib:
+            for mi in full_vib:
                 mi=int(mi)
                 hint=harmonic_intensity_map.get(mi,"")
                 w.writerow([
